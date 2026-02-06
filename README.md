@@ -37,11 +37,52 @@
 ```bash
 # 下载最新版本 (以 Linux amd64 为例)
 VERSION=$(curl -s https://api.github.com/repos/AliceNetworks/gost-panel/releases/latest | grep tag_name | cut -d '"' -f 4)
-curl -fsSL "https://github.com/AliceNetworks/gost-panel/releases/download/${VERSION}/gost-panel_linux_amd64.tar.gz" | tar -xz
-chmod +x gost-panel
+curl -fsSL "https://github.com/AliceNetworks/gost-panel/releases/download/${VERSION}/gost-panel-linux-amd64.tar.gz" | tar -xz
+chmod +x gost-panel-linux-amd64
 
-# 运行
-./gost-panel
+# 运行 (默认端口 8080)
+./gost-panel-linux-amd64
+
+# 自定义端口
+./gost-panel-linux-amd64 -listen :9000
+
+# 自定义监听地址
+./gost-panel-linux-amd64 -listen 0.0.0.0:8080
+```
+
+### 命令行参数
+
+```bash
+gost-panel [options]
+
+选项:
+  -listen string    监听地址 (默认 ":8080")
+                    示例: :9000, 0.0.0.0:8080, 127.0.0.1:8080
+  -db string        数据库路径 (默认 "./data/panel.db")
+  -debug            启用调试模式
+  -version          显示版本信息
+  -help             显示帮助
+
+示例:
+  gost-panel -listen :9000
+  gost-panel -listen 0.0.0.0:8080 -db /var/lib/gost-panel/panel.db
+```
+
+### 环境变量
+
+也可以通过环境变量配置:
+
+| 变量名 | 说明 | 默认值 |
+|--------|------|--------|
+| LISTEN_ADDR | 监听地址 | :8080 |
+| DB_PATH | 数据库路径 | ./data/panel.db |
+| JWT_SECRET | JWT 密钥 (生产环境必须设置) | 随机生成 |
+| DEBUG | 启用调试模式 | false |
+| ALLOWED_ORIGINS | 允许的 CORS 来源 (逗号分隔) | - |
+
+```bash
+# 环境变量示例
+LISTEN_ADDR=:9000 JWT_SECRET=your-secret-key ./gost-panel
 ```
 
 ### 源码安装
@@ -57,6 +98,10 @@ chmod +x gost-panel
 git clone https://github.com/AliceNetworks/gost-panel.git
 cd gost-panel
 
+# 使用构建脚本 (推荐，自动注入版本号)
+./scripts/build.sh all
+
+# 或手动构建
 # 先编译前端 (后端使用 go:embed 嵌入前端文件)
 cd web
 npm install
@@ -75,20 +120,11 @@ GOMAXPROCS=1 go build -o gost-panel ./cmd/panel
 ### Docker 部署
 
 ```bash
-docker-compose up -d
-```
-
-### 配置文件
-
-创建 `config.yaml`:
-
-```yaml
-server:
-  port: 8080
-  jwt_secret: "your-secret-key"
-
-database:
-  path: "./data/panel.db"
+docker run -d \
+  --name gost-panel \
+  -p 8080:8080 \
+  -v gost-panel-data:/app/data \
+  ghcr.io/alicenetworks/gost-panel:latest
 ```
 
 ## 默认账号
