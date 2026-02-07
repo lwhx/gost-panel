@@ -10,6 +10,7 @@ gost-panel
 
 # Build output (binaries, agents)
 dist/
+!internal/api/dist/
 
 # Database
 *.db

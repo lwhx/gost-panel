@@ -14,6 +14,7 @@ import (
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
+	"github.com/AliceNetworks/gost-panel/internal/api/docs"
 	"github.com/AliceNetworks/gost-panel/internal/config"
 	"github.com/AliceNetworks/gost-panel/internal/model"
 	"github.com/AliceNetworks/gost-panel/internal/notify"
@@ -110,6 +111,14 @@ func (s *Server) setupRoutes() {
 	{
 		// 健康检查 (公开)
 		api.GET("/health", s.healthCheck)
+
+		// API 文档 (公开)
+		api.GET("/docs", func(c *gin.Context) {
+			c.Data(http.StatusOK, "text/html; charset=utf-8", docs.SwaggerHTML)
+		})
+		api.GET("/openapi.json", func(c *gin.Context) {
+			c.JSON(http.StatusOK, docs.OpenAPISpec())
+		})
 
 		// 公开接口 (带限流)
 		api.POST("/login", RateLimitMiddleware(s.loginLimiter), s.login)
