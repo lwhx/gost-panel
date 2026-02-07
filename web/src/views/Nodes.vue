@@ -208,6 +208,18 @@
             <n-form-item label="DNS 服务器">
               <n-input v-model:value="form.dns_server" placeholder="8.8.8.8:53 或 udp://1.1.1.1:53" />
             </n-form-item>
+
+            <!-- 高级功能 -->
+            <n-divider>高级功能</n-divider>
+            <n-form-item label="PROXY Protocol">
+              <n-select v-model:value="form.proxy_protocol" :options="proxyProtocolOptions" />
+            </n-form-item>
+            <n-form-item label="探测抵抗">
+              <n-select v-model:value="form.probe_resist" :options="probeResistOptions" clearable placeholder="关闭" />
+            </n-form-item>
+            <n-form-item v-if="form.probe_resist" label="抵抗参数">
+              <n-input v-model:value="form.probe_resist_value" :placeholder="probeResistPlaceholder" />
+            </n-form-item>
           </n-form>
         </n-tab-pane>
 
@@ -473,6 +485,29 @@ const ssMethodOptions = [
   { label: '2022-BLAKE3-CHACHA20-POLY1305', value: '2022-blake3-chacha20-poly1305' },
 ]
 
+const proxyProtocolOptions = [
+  { label: '关闭', value: 0 },
+  { label: 'v1', value: 1 },
+  { label: 'v2', value: 2 },
+]
+
+const probeResistOptions = [
+  { label: '返回状态码 (code)', value: 'code' },
+  { label: '代理到网站 (web)', value: 'web' },
+  { label: '代理到主机 (host)', value: 'host' },
+  { label: '返回文件 (file)', value: 'file' },
+]
+
+const probeResistPlaceholder = computed(() => {
+  switch (form.value.probe_resist) {
+    case 'code': return 'HTTP 状态码，例如: 404'
+    case 'web': return '伪装网站 URL，例如: https://www.example.com'
+    case 'host': return '转发主机地址，例如: example.com:443'
+    case 'file': return '返回文件路径，例如: /var/www/index.html'
+    default: return ''
+  }
+})
+
 const defaultForm = () => ({
   name: '',
   host: '',
@@ -498,6 +533,9 @@ const defaultForm = () => ({
   speed_limit: 0,
   conn_rate_limit: 0,
   dns_server: '',
+  proxy_protocol: 0,
+  probe_resist: '',
+  probe_resist_value: '',
   traffic_quota: 0,
   quota_reset_day: 1,
 })

@@ -150,6 +150,34 @@ func (g *ConfigGenerator) generateMainService(node *model.Node) map[string]inter
 		service["rlimiter"] = "rate-limiter"
 	}
 
+	// PROXY Protocol
+	if node.ProxyProtocol > 0 {
+		if listener, ok := service["listener"].(map[string]interface{}); ok {
+			metadata, _ := listener["metadata"].(map[string]interface{})
+			if metadata == nil {
+				metadata = map[string]interface{}{}
+			}
+			metadata["proxyProtocol"] = true
+			listener["metadata"] = metadata
+		}
+	}
+
+	// 探测抵抗
+	if node.ProbeResist != "" {
+		if handler, ok := service["handler"].(map[string]interface{}); ok {
+			metadata, _ := handler["metadata"].(map[string]interface{})
+			if metadata == nil {
+				metadata = map[string]interface{}{}
+			}
+			probeResist := node.ProbeResist
+			if node.ProbeResistValue != "" {
+				probeResist += ":" + node.ProbeResistValue
+			}
+			metadata["probeResist"] = probeResist
+			handler["metadata"] = metadata
+		}
+	}
+
 	return service
 }
 

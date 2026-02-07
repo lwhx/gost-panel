@@ -52,6 +52,11 @@ type Node struct {
 	ConnRateLimit int   `gorm:"default:0" json:"conn_rate_limit"`           // 每秒最大连接数
 	// DNS 配置
 	DNSServer string `gorm:"size:255" json:"dns_server"`                    // 自定义 DNS
+	// 高级功能
+	ProxyProtocol    int    `gorm:"default:0" json:"proxy_protocol"`        // PROXY Protocol 版本 (0=关闭, 1=v1, 2=v2)
+	ProbeResist      string `gorm:"size:50" json:"probe_resist"`            // 探测抵抗类型: code/web/host/file
+	ProbeResistValue string `gorm:"size:255" json:"probe_resist_value"`     // 探测抵抗值 (状态码/URL/主机名/文件路径)
+	PluginConfig     string `gorm:"type:text" json:"plugin_config"`         // Plugin 配置 JSON
 	// 流量配额
 	TrafficQuota   int64  `gorm:"default:0" json:"traffic_quota"`       // 流量配额 (bytes), 0=无限制
 	QuotaResetDay  int    `gorm:"default:1" json:"quota_reset_day"`     // 每月重置日 (1-28)
