@@ -86,145 +86,161 @@
       </n-text>
     </n-card>
 
-    <!-- User Plan Info (for non-admin users) -->
-    <n-card v-if="userStore.user?.role !== 'admin'" class="mb-4">
-      <template #header>我的套餐</template>
-      <n-space vertical>
-        <n-descriptions :column="2" label-placement="left" size="small">
-          <n-descriptions-item label="当前套餐">
-            {{ userStore.user?.plan?.name || '无套餐' }}
-          </n-descriptions-item>
-          <n-descriptions-item label="到期时间">
-            {{ userStore.user?.plan_expire_at ? formatDate(userStore.user.plan_expire_at) : '永久' }}
-          </n-descriptions-item>
-        </n-descriptions>
-        <n-progress
-          v-if="userStore.user?.plan?.traffic_quota"
-          type="line"
-          :percentage="trafficPercentage"
-          :status="trafficPercentage > 90 ? 'error' : trafficPercentage > 70 ? 'warning' : 'success'"
-        />
-        <n-text v-if="userStore.user?.plan?.traffic_quota" depth="3">
-          已使用 {{ formatBytes(userStore.user?.plan_traffic_used || 0) }} / {{ formatBytes(userStore.user?.plan?.traffic_quota || 0) }}
-        </n-text>
-      </n-space>
-    </n-card>
+    <!-- Card Grid with Drag and Drop -->
+    <div class="card-grid">
+      <div
+        v-for="cardId in visibleCardIds"
+        :key="cardId"
+        class="card-item"
+        :class="{ 'edit-mode': editMode, 'dragging': draggedCardId === cardId, 'drag-over': dragOverCardId === cardId }"
+        :draggable="editMode"
+        @dragstart="onDragStart($event, cardId)"
+        @dragover.prevent="onDragOver($event, cardId)"
+        @drop="onDrop($event, cardId)"
+        @dragend="onDragEnd"
+      >
+        <!-- User Plan Card -->
+        <n-card v-if="cardId === 'user-plan' && userStore.user?.role !== 'admin'">
+          <template #header>我的套餐</template>
+          <n-space vertical>
+            <n-descriptions :column="2" label-placement="left" size="small">
+              <n-descriptions-item label="当前套餐">
+                {{ userStore.user?.plan?.name || '无套餐' }}
+              </n-descriptions-item>
+              <n-descriptions-item label="到期时间">
+                {{ userStore.user?.plan_expire_at ? formatDate(userStore.user.plan_expire_at) : '永久' }}
+              </n-descriptions-item>
+            </n-descriptions>
+            <n-progress
+              v-if="userStore.user?.plan?.traffic_quota"
+              type="line"
+              :percentage="trafficPercentage"
+              :status="trafficPercentage > 90 ? 'error' : trafficPercentage > 70 ? 'warning' : 'success'"
+            />
+            <n-text v-if="userStore.user?.plan?.traffic_quota" depth="3">
+              已使用 {{ formatBytes(userStore.user?.plan_traffic_used || 0) }} / {{ formatBytes(userStore.user?.plan?.traffic_quota || 0) }}
+            </n-text>
+          </n-space>
+        </n-card>
 
-    <!-- Stats Cards -->
-    <n-grid :x-gap="16" :y-gap="16" :cols="4">
-      <n-grid-item>
-        <n-card>
-          <n-statistic label="节点总数" :value="stats.total_nodes">
-            <template #prefix>
-              <n-icon><server-outline /></n-icon>
-            </template>
-          </n-statistic>
-        </n-card>
-      </n-grid-item>
-      <n-grid-item>
-        <n-card>
-          <n-statistic label="在线节点" :value="stats.online_nodes">
-            <template #prefix>
-              <n-icon color="#18a058"><checkmark-circle-outline /></n-icon>
-            </template>
-          </n-statistic>
-        </n-card>
-      </n-grid-item>
-      <n-grid-item>
-        <n-card>
-          <n-statistic label="客户端总数" :value="stats.total_clients">
-            <template #prefix>
-              <n-icon><desktop-outline /></n-icon>
-            </template>
-          </n-statistic>
-        </n-card>
-      </n-grid-item>
-      <n-grid-item>
-        <n-card>
-          <n-statistic label="在线客户端" :value="stats.online_clients">
-            <template #prefix>
-              <n-icon color="#18a058"><checkmark-circle-outline /></n-icon>
-            </template>
-          </n-statistic>
-        </n-card>
-      </n-grid-item>
-    </n-grid>
+        <!-- Stats Cards -->
+        <n-grid v-if="cardId === 'stats'" :x-gap="16" :y-gap="16" :cols="4">
+          <n-grid-item>
+            <n-card>
+              <n-statistic label="节点总数" :value="stats.total_nodes">
+                <template #prefix>
+                  <n-icon><server-outline /></n-icon>
+                </template>
+              </n-statistic>
+            </n-card>
+          </n-grid-item>
+          <n-grid-item>
+            <n-card>
+              <n-statistic label="在线节点" :value="stats.online_nodes">
+                <template #prefix>
+                  <n-icon color="#18a058"><checkmark-circle-outline /></n-icon>
+                </template>
+              </n-statistic>
+            </n-card>
+          </n-grid-item>
+          <n-grid-item>
+            <n-card>
+              <n-statistic label="客户端总数" :value="stats.total_clients">
+                <template #prefix>
+                  <n-icon><desktop-outline /></n-icon>
+                </template>
+              </n-statistic>
+            </n-card>
+          </n-grid-item>
+          <n-grid-item>
+            <n-card>
+              <n-statistic label="在线客户端" :value="stats.online_clients">
+                <template #prefix>
+                  <n-icon color="#18a058"><checkmark-circle-outline /></n-icon>
+                </template>
+              </n-statistic>
+            </n-card>
+          </n-grid-item>
+        </n-grid>
 
-    <!-- Status Pie Charts -->
-    <n-grid :x-gap="16" :y-gap="16" :cols="2" class="mt-4">
-      <n-grid-item>
-        <n-card title="节点状态分布">
-          <div ref="nodePieRef" style="height: 200px"></div>
+        <!-- Status Pie Charts -->
+        <n-grid v-if="cardId === 'status-charts'" :x-gap="16" :y-gap="16" :cols="2">
+          <n-grid-item>
+            <n-card title="节点状态分布">
+              <div ref="nodePieRef" style="height: 200px"></div>
+            </n-card>
+          </n-grid-item>
+          <n-grid-item>
+            <n-card title="客户端状态分布">
+              <div ref="clientPieRef" style="height: 200px"></div>
+            </n-card>
+          </n-grid-item>
+        </n-grid>
+
+        <!-- Traffic Chart -->
+        <n-card v-if="cardId === 'traffic-chart'" title="流量趋势">
+          <template #header-extra>
+            <n-select
+              v-model:value="chartHours"
+              :options="hoursOptions"
+              style="width: 100px"
+              size="small"
+              @update:value="loadTrafficHistory"
+            />
+          </template>
+          <div ref="chartRef" style="height: 300px"></div>
         </n-card>
-      </n-grid-item>
-      <n-grid-item>
-        <n-card title="客户端状态分布">
-          <div ref="clientPieRef" style="height: 200px"></div>
+
+        <!-- Traffic Stats -->
+        <n-card v-if="cardId === 'traffic-stats'" title="流量统计">
+          <n-grid :x-gap="24" :cols="3">
+            <n-grid-item>
+              <div class="stat-row">
+                <span class="label">入站流量</span>
+                <span class="value">{{ formatBytes(stats.total_traffic_in) }}</span>
+              </div>
+            </n-grid-item>
+            <n-grid-item>
+              <div class="stat-row">
+                <span class="label">出站流量</span>
+                <span class="value">{{ formatBytes(stats.total_traffic_out) }}</span>
+              </div>
+            </n-grid-item>
+            <n-grid-item>
+              <div class="stat-row">
+                <span class="label">当前连接</span>
+                <span class="value highlight">{{ stats.total_connections }}</span>
+              </div>
+            </n-grid-item>
+          </n-grid>
         </n-card>
-      </n-grid-item>
-    </n-grid>
 
-    <!-- Traffic Chart -->
-    <n-card title="流量趋势" class="mt-4">
-      <template #header-extra>
-        <n-select
-          v-model:value="chartHours"
-          :options="hoursOptions"
-          style="width: 100px"
-          size="small"
-          @update:value="loadTrafficHistory"
-        />
-      </template>
-      <div ref="chartRef" style="height: 300px"></div>
-    </n-card>
-
-    <!-- Traffic Stats -->
-    <n-card title="流量统计" class="mt-4">
-      <n-grid :x-gap="24" :cols="3">
-        <n-grid-item>
-          <div class="stat-row">
-            <span class="label">入站流量</span>
-            <span class="value">{{ formatBytes(stats.total_traffic_in) }}</span>
-          </div>
-        </n-grid-item>
-        <n-grid-item>
-          <div class="stat-row">
-            <span class="label">出站流量</span>
-            <span class="value">{{ formatBytes(stats.total_traffic_out) }}</span>
-          </div>
-        </n-grid-item>
-        <n-grid-item>
-          <div class="stat-row">
-            <span class="label">当前连接</span>
-            <span class="value highlight">{{ stats.total_connections }}</span>
-          </div>
-        </n-grid-item>
-      </n-grid>
-    </n-card>
-
-    <!-- Nodes Status -->
-    <n-card title="节点状态" class="mt-4">
-      <n-data-table
-        :columns="nodeColumns"
-        :data="nodes"
-        :loading="nodesLoading"
-        :row-key="(row: any) => row.id"
-        size="small"
-        :max-height="300"
-      />
-    </n-card>
+        <!-- Nodes Status -->
+        <n-card v-if="cardId === 'nodes-status'" title="节点状态">
+          <n-data-table
+            :columns="nodeColumns"
+            :data="nodes"
+            :loading="nodesLoading"
+            :row-key="(row: any) => row.id"
+            size="small"
+            :max-height="300"
+          />
+        </n-card>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, h, nextTick, computed } from 'vue'
-import { NTag, NSwitch, NTooltip, NDivider } from 'naive-ui'
+import { NTag, NSwitch, NTooltip, NDivider, useMessage } from 'naive-ui'
 import {
   ServerOutline,
   DesktopOutline,
   CheckmarkCircleOutline,
   RefreshOutline,
   NotificationsOutline,
+  OptionsOutline,
 } from '@vicons/ionicons5'
 import * as echarts from 'echarts'
 import { getStats, getNodes, getTrafficHistory } from '../api'
@@ -232,6 +248,7 @@ import { useBrowserNotification } from '../composables/useBrowserNotification'
 import { useUserStore } from '../stores/user'
 import { dashboardGuide, shouldShowGuide, markGuideComplete } from '../guides'
 
+const message = useMessage()
 const userStore = useUserStore()
 const { requestPermission, notifyNodeOffline, notifyNodeOnline, checkPermission } = useBrowserNotification()
 const notificationsEnabled = ref(false)
@@ -253,6 +270,115 @@ let clientPieChart: echarts.ECharts | null = null
 let ws: WebSocket | null = null
 let wsReconnectTimer: ReturnType<typeof setTimeout> | null = null
 let resizeHandler: (() => void) | null = null
+
+// Card customization state
+const editMode = ref(false)
+const draggedCardId = ref('')
+const dragOverCardId = ref('')
+
+// Card definitions
+const allCards = [
+  { id: 'user-plan', title: '我的套餐' },
+  { id: 'stats', title: '系统概览' },
+  { id: 'status-charts', title: '状态分布' },
+  { id: 'traffic-chart', title: '流量趋势' },
+  { id: 'traffic-stats', title: '流量统计' },
+  { id: 'nodes-status', title: '节点状态' },
+]
+
+// Default layout
+const getDefaultLayout = () => {
+  if (userStore.user?.role !== 'admin') {
+    return ['user-plan', 'stats', 'status-charts', 'traffic-chart', 'traffic-stats', 'nodes-status']
+  }
+  return ['stats', 'status-charts', 'traffic-chart', 'traffic-stats', 'nodes-status']
+}
+
+// Load layout from localStorage
+const loadLayout = (): string[] => {
+  try {
+    const saved = localStorage.getItem('dashboard_layout')
+    if (saved) {
+      const layout = JSON.parse(saved)
+      // Filter out invalid card IDs
+      return layout.filter((id: string) => allCards.some(card => card.id === id))
+    }
+  } catch (e) {
+    console.error('Failed to load dashboard layout', e)
+  }
+  return getDefaultLayout()
+}
+
+const visibleCardIds = ref<string[]>(loadLayout())
+
+// Layout functions
+const saveLayout = () => {
+  try {
+    localStorage.setItem('dashboard_layout', JSON.stringify(visibleCardIds.value))
+    editMode.value = false
+    message.success('布局已保存')
+  } catch (e) {
+    console.error('Failed to save layout', e)
+    message.error('保存布局失败')
+  }
+}
+
+const resetLayout = () => {
+  visibleCardIds.value = getDefaultLayout()
+  localStorage.removeItem('dashboard_layout')
+  message.success('已恢复默认布局')
+}
+
+const toggleCard = (id: string, visible: boolean) => {
+  if (visible) {
+    if (!visibleCardIds.value.includes(id)) {
+      visibleCardIds.value.push(id)
+    }
+  } else {
+    visibleCardIds.value = visibleCardIds.value.filter(c => c !== id)
+  }
+}
+
+// Drag and drop functions
+const onDragStart = (e: DragEvent, id: string) => {
+  draggedCardId.value = id
+  if (e.dataTransfer) {
+    e.dataTransfer.effectAllowed = 'move'
+    e.dataTransfer.setData('text/plain', id)
+  }
+}
+
+const onDragOver = (e: DragEvent, id: string) => {
+  e.preventDefault()
+  dragOverCardId.value = id
+  if (e.dataTransfer) {
+    e.dataTransfer.dropEffect = 'move'
+  }
+}
+
+const onDrop = (e: DragEvent, targetId: string) => {
+  e.preventDefault()
+  dragOverCardId.value = ''
+
+  if (draggedCardId.value && draggedCardId.value !== targetId) {
+    const arr = [...visibleCardIds.value]
+    const fromIdx = arr.indexOf(draggedCardId.value)
+    const toIdx = arr.indexOf(targetId)
+
+    if (fromIdx !== -1 && toIdx !== -1) {
+      // Remove from old position
+      arr.splice(fromIdx, 1)
+      // Insert at new position
+      arr.splice(toIdx, 0, draggedCardId.value)
+      visibleCardIds.value = arr
+    }
+  }
+}
+
+const onDragEnd = () => {
+  draggedCardId.value = ''
+  dragOverCardId.value = ''
+}
 
 const intervalOptions = [
   { label: '5s', value: 5000 },
@@ -830,6 +956,40 @@ onUnmounted(() => {
   margin-top: 16px;
 }
 
+/* Card Grid */
+.card-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+}
+
+.card-item {
+  transition: all 0.2s ease;
+}
+
+.card-item.edit-mode {
+  cursor: grab;
+  border: 2px dashed transparent;
+  border-radius: 8px;
+  padding: 2px;
+  margin: -2px;
+}
+
+.card-item.edit-mode:hover {
+  border-color: rgba(59, 130, 246, 0.5);
+  background-color: rgba(59, 130, 246, 0.05);
+}
+
+.card-item.edit-mode.dragging {
+  opacity: 0.5;
+  cursor: grabbing;
+}
+
+.card-item.edit-mode.drag-over {
+  border-color: #3b82f6;
+  background-color: rgba(59, 130, 246, 0.1);
+}
+
 .stat-row {
   display: flex;
   flex-direction: column;
@@ -923,5 +1083,15 @@ onUnmounted(() => {
 :global(html:not(.dark)) :deep(.n-card:hover) {
   border-color: #e8e4db !important;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08), 0 0 10px rgba(79, 124, 255, 0.08);
+}
+
+:global(html:not(.dark)) .card-item.edit-mode:hover {
+  border-color: rgba(59, 130, 246, 0.5);
+  background-color: rgba(59, 130, 246, 0.05);
+}
+
+:global(html:not(.dark)) .card-item.edit-mode.drag-over {
+  border-color: #3b82f6;
+  background-color: rgba(59, 130, 246, 0.1);
 }
 </style>
