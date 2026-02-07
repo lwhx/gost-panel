@@ -5,28 +5,71 @@
 [![Go Version](https://img.shields.io/badge/go-1.21+-blue.svg)](https://go.dev/)
 [![Vue Version](https://img.shields.io/badge/vue-3.x-green.svg)](https://vuejs.org/)
 
-基于 [GOST v3](https://github.com/go-gost/gost) 的现代化代理管理面板。
+基于 [GOST v3](https://github.com/go-gost/gost) 的全功能代理管理面板，提供现代化 Web UI 和完整的 API 接口。
 
 ## 功能特性
 
-- **多协议支持**: SOCKS5, HTTP, Shadowsocks, Trojan, VMess
-- **多传输层**: TCP, TLS, WebSocket, HTTP/2, QUIC, KCP, gRPC
-- **节点管理**: 多 VPS 节点管理，实时状态监控，批量操作
+### 协议与传输
+
+- **13 种代理协议**: SOCKS5, HTTP, Shadowsocks, Trojan, VMess, Relay, TCP, UDP, SNI, DNS, SSH, Redirect (透明代理), TUN (全局代理)
+- **21 种传输方式**: TCP, UDP, TCP+UDP, TLS, mTLS, WS, WSS, H2, H2C, QUIC, KCP, gRPC, PHT, PHTS, mWS, mWSS, HTTP/3, DTLS, SSH, oHTTP, oTLS
+- **端口转发**: TCP/UDP/RTCP (远程反向 TCP)/RUDP (远程反向 UDP)/Relay 中继，支持代理链
+- **隧道转发**: 入口节点 → 出口节点链式代理
+- **代理链**: 多跳代理，自定义跳点顺序
+
+### 节点与客户端
+
+- **多节点管理**: 多 VPS 节点管理，实时状态监控，批量操作 (启用/禁用/同步/删除)
+- **Agent 自动化**: 一键安装脚本 (Linux/Windows)，自动注册、心跳、配置同步、版本更新
 - **客户端管理**: 反向隧道客户端，访问内网服务
-- **负载均衡**: 节点组支持轮询、随机、哈希策略
-- **端口转发**: TCP/UDP/RTCP/RUDP 转发规则
-- **流量监控**: 实时统计和历史图表
-- **告警系统**: Telegram、Webhook、邮件通知
-- **多用户**: 基于角色的访问控制 (admin/user/viewer)
-- **流量配额**: 节点和客户端流量限制
-- **实时推送**: WebSocket 实时节点状态更新
-- **隧道转发**: 入口节点连接出口节点，链式代理
-- **代理链**: 多跳代理配置
-- **自动更新**: Agent 自动检测并更新新版本
-- **暗色主题**: 现代 Glassmorphism 风格暗色 UI
-- **操作日志**: 完整的审计日志记录
-- **数据导出**: 支持 JSON/YAML 格式导入导出
-- **配置备份**: 一键备份和恢复数据库
+- **节点组/负载均衡**: 轮询、随机、哈希策略，健康检查，权重/优先级配置
+- **17 种架构支持**: linux/amd64, arm64, armv7, armv6, mips/mipsle/mips64, windows/amd64+arm64+x86 等
+
+### GOST 配置对象 (全部 14 种)
+
+- **Services** - 代理服务
+- **Chains** - 转发链
+- **Bypasses** - 分流规则 (黑/白名单)
+- **Admissions** - 准入控制
+- **Hosts** - 主机映射/域名解析
+- **Resolvers** - DNS 解析器
+- **Observers** - 流量观测
+- **Authers** - 认证器
+- **Limiters** - 速率/带宽限制
+- **RLimiters** - 连接频率限制
+- **Ingresses** - HTTP/HTTPS 反向代理路由
+- **Recorders** - 流量记录 (File/Redis/HTTP)
+- **Routers** - 自定义路由/网关
+- **SDs** - 服务发现 (Consul/Etcd/Redis/HTTP)
+
+### 高级功能
+
+- **探测抵抗**: code/web/host/file 伪装模式
+- **PROXY Protocol**: v1/v2 保留源 IP
+- **KCP 高级参数**: MTU/发送窗口/接收窗口/分片可调
+- **TLS 高级配置**: ALPN 协议列表支持
+- **DNS 高级配置**: 支持任意 DNS 协议
+- **Plugin 系统**: JSON 配置字段支持
+
+### 面板功能
+
+- **Dashboard**: 实时统计 + ECharts 图表 + 可拖拽卡片布局
+- **WebSocket 实时推送**: 节点/客户端状态实时更新
+- **双因素认证 (2FA)**: TOTP (Google/Microsoft Authenticator) + 备份码
+- **套餐管理**: 流量配额、速率限制、资源限制 (节点/客户端/隧道/转发/代理链/节点组)
+- **通知告警**: Telegram / Webhook / SMTP 邮件
+- **操作日志**: 完整审计日志
+- **配置版本历史**: 自动快照、手动创建、恢复、删除
+- **一键克隆**: 节点/客户端/端口转发/隧道/代理链/节点组/规则 (Bypass/Admission/Ingress/Recorder/Router/SD)
+- **全局搜索**: 所有列表页支持实时搜索过滤
+- **数据导出**: JSON/YAML 格式导入导出 + 数据库备份恢复
+- **Swagger API 文档**: `/api/docs`
+- **暗色主题**: Glassmorphism 风格 UI
+- **移动端适配**: 响应式布局
+- **快捷键**: 快速新建/保存操作
+- **多用户**: admin/user/viewer 角色权限控制
+- **资源隔离**: 用户只能操作自己的资源 (ownership 权限检查)
+- **多架构构建**: Panel (linux/amd64, linux/arm64, windows/amd64), Agent (17 架构)
 
 ## 快速开始
 
@@ -45,9 +88,34 @@ chmod +x gost-panel-linux-amd64
 
 # 自定义端口
 ./gost-panel-linux-amd64 -listen :9000
+```
 
-# 自定义监听地址
-./gost-panel-linux-amd64 -listen 0.0.0.0:8080
+### Systemd 服务部署
+
+```bash
+# 创建目录和复制二进制
+mkdir -p /opt/gost-panel
+cp gost-panel-linux-amd64 /opt/gost-panel/gost-panel
+
+# 创建 systemd 服务
+cat > /etc/systemd/system/gost-panel.service << 'EOF'
+[Unit]
+Description=GOST Panel
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/gost-panel
+ExecStart=/opt/gost-panel/gost-panel -listen :8080
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+systemctl daemon-reload
+systemctl enable --now gost-panel
 ```
 
 ### 命令行参数
@@ -62,15 +130,9 @@ gost-panel [options]
   -debug            启用调试模式
   -version          显示版本信息
   -help             显示帮助
-
-示例:
-  gost-panel -listen :9000
-  gost-panel -listen 0.0.0.0:8080 -db /var/lib/gost-panel/panel.db
 ```
 
 ### 环境变量
-
-也可以通过环境变量配置:
 
 | 变量名 | 说明 | 默认值 |
 |--------|------|--------|
@@ -79,43 +141,6 @@ gost-panel [options]
 | JWT_SECRET | JWT 密钥 (生产环境必须设置) | 随机生成 |
 | DEBUG | 启用调试模式 | false |
 | ALLOWED_ORIGINS | 允许的 CORS 来源 (逗号分隔) | - |
-
-```bash
-# 环境变量示例
-LISTEN_ADDR=:9000 JWT_SECRET=your-secret-key ./gost-panel
-```
-
-### 源码安装
-
-#### 环境要求
-
-- Go 1.21+
-- Node.js 18+
-- 节点需安装 [GOST v3](https://github.com/go-gost/gost/releases)
-
-```bash
-# 克隆仓库
-git clone https://github.com/AliceNetworks/gost-panel.git
-cd gost-panel
-
-# 使用构建脚本 (推荐，自动注入版本号)
-./scripts/build.sh all
-
-# 或手动构建
-# 先编译前端 (后端使用 go:embed 嵌入前端文件)
-cd web
-npm install
-NODE_OPTIONS="--max-old-space-size=1024" npm run build
-cd ..
-
-# 编译后端 (低内存服务器限制 CPU)
-GOMAXPROCS=1 go build -o gost-panel ./cmd/panel
-
-# 运行
-./gost-panel
-```
-
-> **注意**: 必须先编译前端再编译后端，因为 Go 二进制文件使用 `go:embed` 嵌入前端资源。
 
 ### Docker 部署
 
@@ -127,76 +152,33 @@ docker run -d \
   ghcr.io/alicenetworks/gost-panel:latest
 ```
 
+### 源码构建
+
+```bash
+git clone https://github.com/AliceNetworks/gost-panel.git
+cd gost-panel
+
+# 使用构建脚本 (推荐)
+./scripts/build.sh all
+
+# 或手动构建
+cd web && npm install && npm run build && cd ..
+go build -o gost-panel ./cmd/panel
+./gost-panel
+```
+
+> **注意**: 必须先编译前端再编译后端，因为 Go 使用 `go:embed` 嵌入前端资源。
+
 ## 默认账号
 
 - 用户名: `admin`
 - 密码: `admin123`
 
-**首次登录后请立即修改默认密码！**
-
-## 项目结构
-
-```
-gost-panel/
-├── cmd/
-│   ├── panel/       # 面板主程序
-│   └── agent/       # 节点 Agent
-├── internal/
-│   ├── api/         # HTTP API 处理
-│   ├── config/      # 配置管理
-│   ├── gost/        # GOST API 客户端
-│   ├── model/       # 数据库模型
-│   ├── notify/      # 告警服务
-│   └── service/     # 业务逻辑
-├── web/             # Vue.js 前端
-└── scripts/         # 部署脚本
-```
-
-## API 接口
-
-### 认证
-
-| 方法 | 路径 | 说明 |
-|------|------|------|
-| POST | /api/login | 用户登录 |
-| POST | /api/register | 用户注册 |
-| POST | /api/change-password | 修改密码 |
-| GET | /api/profile | 获取个人资料 |
-| PUT | /api/profile | 更新个人资料 |
-
-### 管理
-
-| 方法 | 路径 | 说明 |
-|------|------|------|
-| GET | /api/stats | 仪表盘统计 |
-| GET | /api/search | 全局搜索 |
-| GET | /api/nodes | 节点列表 |
-| POST | /api/nodes | 创建节点 |
-| GET | /api/clients | 客户端列表 |
-| POST | /api/clients | 创建客户端 |
-| GET | /api/port-forwards | 端口转发列表 |
-| GET | /api/node-groups | 节点组列表 |
-| GET | /api/notify-channels | 通知渠道列表 |
-| GET | /api/alert-rules | 告警规则列表 |
-| GET | /api/tunnels | 隧道列表 |
-| GET | /api/proxy-chains | 代理链列表 |
-| GET | /api/operation-logs | 操作日志 |
-| GET | /ws | WebSocket 实时推送 |
-
-### 数据管理
-
-| 方法 | 路径 | 说明 |
-|------|------|------|
-| GET | /api/export | 导出数据 (JSON/YAML) |
-| POST | /api/import | 导入数据 |
-| GET | /api/backup | 下载数据库备份 |
-| POST | /api/restore | 恢复数据库 |
+**首次登录后请立即修改默认密码！** (系统会自动提示)
 
 ## 节点部署
 
-### 一键安装 (推荐)
-
-在面板创建节点后，从节点详情页复制安装命令。
+在面板创建节点后，从节点详情页复制安装命令：
 
 **Linux:**
 ```bash
@@ -215,13 +197,9 @@ irm "https://your-panel.com/scripts/install-node.ps1" -OutFile "$env:TEMP\instal
 | Linux | amd64, arm64, armv7, armv6, mips, mipsle, mips64 | systemd, sysvinit, procd (OpenWrt), openrc |
 | Windows | amd64, arm64, x86 | NSSM 服务, 计划任务 |
 
-### 手动安装
-
-详细的手动安装步骤请参考 [节点部署指南](https://github.com/AliceNetworks/gost-panel/wiki/Node-Deployment) (Wiki)。
-
 ## 客户端部署
 
-用于反向隧道客户端 (访问内网服务):
+用于反向隧道 (访问内网服务):
 
 **Linux:**
 ```bash
@@ -233,22 +211,66 @@ curl -fsSL "https://your-panel.com/scripts/install-client.sh" | bash -s -- -p "h
 irm "https://your-panel.com/scripts/install-client.ps1" -OutFile "$env:TEMP\install-client.ps1"; & "$env:TEMP\install-client.ps1" -PanelUrl "https://your-panel.com" -Token "CLIENT_TOKEN"
 ```
 
-## 开发
+## API 文档
 
-```bash
-# 后端开发
-go run ./cmd/panel
+面板内置 Swagger API 文档，访问 `http://your-panel:8080/api/docs` 查看完整接口列表。
 
-# 前端开发 (热重载)
-cd web
-npm run dev
+### 主要接口
+
+| 类别 | 方法 | 路径 | 说明 |
+|------|------|------|------|
+| 认证 | POST | /api/login | 用户登录 |
+| 认证 | POST | /api/login/2fa | 双因素验证 |
+| 认证 | POST | /api/register | 用户注册 |
+| 节点 | GET/POST | /api/nodes | 列表/创建 |
+| 客户端 | GET/POST | /api/clients | 列表/创建 |
+| 端口转发 | GET/POST | /api/port-forwards | 列表/创建 |
+| 隧道 | GET/POST | /api/tunnels | 列表/创建 |
+| 代理链 | GET/POST | /api/proxy-chains | 列表/创建 |
+| 节点组 | GET/POST | /api/node-groups | 列表/创建 |
+| 规则 | GET/POST | /api/bypasses | 分流规则 |
+| 规则 | GET/POST | /api/admissions | 准入控制 |
+| 规则 | GET/POST | /api/host-mappings | 主机映射 |
+| 规则 | GET/POST | /api/ingresses | 反向代理 |
+| 规则 | GET/POST | /api/recorders | 流量记录 |
+| 规则 | GET/POST | /api/routers | 路由管理 |
+| 规则 | GET/POST | /api/sds | 服务发现 |
+| 用户 | GET/POST | /api/users | 用户管理 |
+| 套餐 | GET/POST | /api/plans | 套餐管理 |
+| 通知 | GET/POST | /api/notify-channels | 通知渠道 |
+| 告警 | GET/POST | /api/alert-rules | 告警规则 |
+| 统计 | GET | /api/stats | Dashboard 统计 |
+| 数据 | GET/POST | /api/export, /api/import | 数据导入导出 |
+| 实时 | GET | /ws | WebSocket 推送 |
+
+## 项目结构
+
+```
+gost-panel/
+├── cmd/
+│   ├── panel/       # 面板主程序
+│   └── agent/       # 节点 Agent
+├── internal/
+│   ├── api/         # HTTP API 处理 + Swagger 文档
+│   ├── config/      # 配置管理
+│   ├── gost/        # GOST 配置生成器
+│   ├── model/       # 数据库模型
+│   ├── notify/      # 告警通知服务
+│   └── service/     # 业务逻辑 + 权限控制
+├── web/             # Vue 3 + TypeScript 前端
+│   ├── src/views/   # 页面组件
+│   ├── src/api/     # API 调用
+│   ├── src/stores/  # Pinia 状态管理
+│   └── src/types/   # TypeScript 类型定义
+└── scripts/         # 构建和部署脚本
 ```
 
 ## 技术栈
 
 - **后端**: [Go](https://go.dev/), [Gin](https://github.com/gin-gonic/gin), [GORM](https://gorm.io/), SQLite
 - **前端**: [Vue 3](https://vuejs.org/), TypeScript, [Naive UI](https://www.naiveui.com/), [ECharts](https://echarts.apache.org/)
-- **构建**: [Vite](https://vitejs.dev/), Docker
+- **构建**: [Vite](https://vitejs.dev/), GitHub Actions
+- **安全**: JWT 认证, TOTP 双因素, bcrypt 密码哈希, 资源隔离
 
 ## 相关链接
 
