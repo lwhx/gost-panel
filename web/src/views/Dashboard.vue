@@ -232,7 +232,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, h, nextTick, computed } from 'vue'
+import { ref, onMounted, onUnmounted, h, nextTick, computed, watch } from 'vue'
 import { NTag, NSwitch, NTooltip, NDivider, useMessage } from 'naive-ui'
 import {
   ServerOutline,
@@ -495,28 +495,48 @@ const loadTrafficHistory = async () => {
 
 const initChart = () => {
   if (!chartRef.value) return
+  if (chart) {
+    chart.dispose()
+  }
 
   chart = echarts.init(chartRef.value)
   updateChart()
 
   // 监听窗口大小变化
-  resizeHandler = () => {
-    chart?.resize()
-    nodePieChart?.resize()
-    clientPieChart?.resize()
+  if (!resizeHandler) {
+    resizeHandler = () => {
+      chart?.resize()
+      nodePieChart?.resize()
+      clientPieChart?.resize()
+    }
+    window.addEventListener('resize', resizeHandler)
   }
-  window.addEventListener('resize', resizeHandler)
 }
 
 const initPieCharts = () => {
   if (nodePieRef.value) {
+    if (nodePieChart) nodePieChart.dispose()
     nodePieChart = echarts.init(nodePieRef.value)
   }
   if (clientPieRef.value) {
+    if (clientPieChart) clientPieChart.dispose()
     clientPieChart = echarts.init(clientPieRef.value)
   }
   updatePieCharts()
 }
+
+// 监听 ref 可用时初始化图表（v-for + v-if 中 ref 可能延迟就绪）
+watch(chartRef, (el) => {
+  if (el && !chart) {
+    initChart()
+  }
+})
+
+watch([nodePieRef, clientPieRef], ([nodeEl, clientEl]) => {
+  if ((nodeEl && !nodePieChart) || (clientEl && !clientPieChart)) {
+    initPieCharts()
+  }
+})
 
 const updatePieCharts = () => {
   const onlineNodes = stats.value.online_nodes
@@ -873,6 +893,8 @@ const handleWSMessage = (msg: { type: string; data: any }) => {
 onMounted(() => {
   // 不使用 await，让加载异步进行，不阻塞 UI
   loadAll()
+  // 图表初始化由 watch(chartRef/nodePieRef/clientPieRef) 处理
+  // 确保 v-for + v-if 中的 ref 就绪后再 init
   nextTick(() => {
     initChart()
     initPieCharts()
