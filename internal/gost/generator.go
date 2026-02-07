@@ -977,3 +977,37 @@ func (g *ConfigGenerator) generateIngressConfigs(nodeID uint, ingresses []model.
 		},
 	}
 }
+
+// generateRouterConfigs 生成 Router 路由配置
+func (g *ConfigGenerator) generateRouterConfigs(nodeID uint, routers []model.Router) []map[string]interface{} {
+	type routeEntry struct {
+		Net     string `json:"net"`
+		Gateway string `json:"gateway"`
+	}
+
+	allRoutes := []map[string]interface{}{}
+
+	for _, r := range routers {
+		var routes []routeEntry
+		if err := json.Unmarshal([]byte(r.Routes), &routes); err == nil {
+			for _, rt := range routes {
+				route := map[string]interface{}{
+					"net":     rt.Net,
+					"gateway": rt.Gateway,
+				}
+				allRoutes = append(allRoutes, route)
+			}
+		}
+	}
+
+	if len(allRoutes) == 0 {
+		return nil
+	}
+
+	return []map[string]interface{}{
+		{
+			"name":   fmt.Sprintf("router-%d", nodeID),
+			"routes": allRoutes,
+		},
+	}
+}

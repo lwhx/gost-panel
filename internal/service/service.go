@@ -2091,3 +2091,89 @@ func (s *Service) GetRecordersByNode(nodeID uint) ([]model.Recorder, error) {
 	err := s.db.Where("node_id = ? OR node_id IS NULL", nodeID).Find(&recorders).Error
 	return recorders, err
 }
+
+// ==================== Router 路由管理 ====================
+
+func (s *Service) ListRouters(userID uint, isAdmin bool) ([]model.Router, error) {
+	var routers []model.Router
+	query := s.db.Order("id desc")
+	if !isAdmin {
+		query = query.Where("owner_id = ? OR owner_id IS NULL", userID)
+	}
+	return routers, query.Find(&routers).Error
+}
+
+func (s *Service) GetRouter(id uint) (*model.Router, error) {
+	var router model.Router
+	err := s.db.First(&router, id).Error
+	if err != nil {
+		return nil, err
+	}
+	return &router, nil
+}
+
+func (s *Service) CreateRouter(router *model.Router) error {
+	router.CreatedAt = time.Now()
+	router.UpdatedAt = time.Now()
+	return s.db.Create(router).Error
+}
+
+func (s *Service) UpdateRouter(id uint, updates map[string]interface{}) error {
+	updates["updated_at"] = time.Now()
+	delete(updates, "id")
+	delete(updates, "created_at")
+	return s.db.Model(&model.Router{}).Where("id = ?", id).Updates(updates).Error
+}
+
+func (s *Service) DeleteRouter(id uint) error {
+	return s.db.Delete(&model.Router{}, id).Error
+}
+
+func (s *Service) GetRoutersByNode(nodeID uint) ([]model.Router, error) {
+	var routers []model.Router
+	err := s.db.Where("node_id = ? OR node_id IS NULL", nodeID).Find(&routers).Error
+	return routers, err
+}
+
+// ==================== SD 服务发现 ====================
+
+func (s *Service) ListSDs(userID uint, isAdmin bool) ([]model.SD, error) {
+	var sds []model.SD
+	query := s.db.Order("id desc")
+	if !isAdmin {
+		query = query.Where("owner_id = ? OR owner_id IS NULL", userID)
+	}
+	return sds, query.Find(&sds).Error
+}
+
+func (s *Service) GetSD(id uint) (*model.SD, error) {
+	var sd model.SD
+	err := s.db.First(&sd, id).Error
+	if err != nil {
+		return nil, err
+	}
+	return &sd, nil
+}
+
+func (s *Service) CreateSD(sd *model.SD) error {
+	sd.CreatedAt = time.Now()
+	sd.UpdatedAt = time.Now()
+	return s.db.Create(sd).Error
+}
+
+func (s *Service) UpdateSD(id uint, updates map[string]interface{}) error {
+	updates["updated_at"] = time.Now()
+	delete(updates, "id")
+	delete(updates, "created_at")
+	return s.db.Model(&model.SD{}).Where("id = ?", id).Updates(updates).Error
+}
+
+func (s *Service) DeleteSD(id uint) error {
+	return s.db.Delete(&model.SD{}, id).Error
+}
+
+func (s *Service) GetSDsByNode(nodeID uint) ([]model.SD, error) {
+	var sds []model.SD
+	err := s.db.Where("node_id = ? OR node_id IS NULL", nodeID).Find(&sds).Error
+	return sds, err
+}

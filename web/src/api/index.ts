@@ -36,6 +36,10 @@ import type {
   IngressUpdateRequest,
   RecorderCreateRequest,
   RecorderUpdateRequest,
+  RouterCreateRequest,
+  RouterUpdateRequest,
+  SDCreateRequest,
+  SDUpdateRequest,
   PaginationParams,
   ProfileUpdateRequest,
 } from '../types'
@@ -321,5 +325,19 @@ export const getRecorder = (id: number) => api.get(`/recorders/${id}`)
 export const createRecorder = (data: RecorderCreateRequest) => api.post('/recorders', data)
 export const updateRecorder = (id: number, data: RecorderUpdateRequest) => api.put(`/recorders/${id}`, data)
 export const deleteRecorder = (id: number) => api.delete(`/recorders/${id}`)
+
+// Router 路由管理
+export const getRouters = () => api.get('/routers')
+export const getRouter = (id: number) => api.get(`/routers/${id}`)
+export const createRouter = (data: RouterCreateRequest) => api.post('/routers', data)
+export const updateRouter = (id: number, data: RouterUpdateRequest) => api.put(`/routers/${id}`, data)
+export const deleteRouter = (id: number) => api.delete(`/routers/${id}`)
+
+// SD 服务发现
+export const getSDs = () => api.get('/sds')
+export const getSD = (id: number) => api.get(`/sds/${id}`)
+export const createSD = (data: SDCreateRequest) => api.post('/sds', data)
+export const updateSD = (id: number, data: SDUpdateRequest) => api.put(`/sds/${id}`, data)
+export const deleteSD = (id: number) => api.delete(`/sds/${id}`)
 
 export default api

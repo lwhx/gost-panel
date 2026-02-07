@@ -69,6 +69,32 @@
           <EmptyState v-else-if="!recorderLoading && recorders.length === 0" type="rules" action-text="添加记录器" @action="openRecorderModal()" />
           <n-data-table v-else :columns="recorderColumns" :data="recorders" :loading="recorderLoading" :row-key="(row: any) => row.id" size="small" />
         </n-tab-pane>
+
+        <!-- Router 路由管理 -->
+        <n-tab-pane name="router" tab="路由管理 (Router)">
+          <n-alert type="info" style="margin-bottom: 16px;">
+            Router 根据目标网络地址将流量路由到不同的网关，实现策略路由和分流转发。
+          </n-alert>
+          <n-space justify="end" style="margin-bottom: 12px;">
+            <n-button type="primary" size="small" @click="openRouterModal()">添加路由</n-button>
+          </n-space>
+          <TableSkeleton v-if="routerLoading && routers.length === 0" :rows="3" />
+          <EmptyState v-else-if="!routerLoading && routers.length === 0" type="rules" action-text="添加路由" @action="openRouterModal()" />
+          <n-data-table v-else :columns="routerColumns" :data="routers" :loading="routerLoading" :row-key="(row: any) => row.id" size="small" />
+        </n-tab-pane>
+
+        <!-- SD 服务发现 -->
+        <n-tab-pane name="sd" tab="服务发现 (SD)">
+          <n-alert type="info" style="margin-bottom: 16px;">
+            SD 从外部注册中心（HTTP/Consul/Etcd/Redis）动态发现服务，用于自动负载均衡和节点管理。
+          </n-alert>
+          <n-space justify="end" style="margin-bottom: 12px;">
+            <n-button type="primary" size="small" @click="openSDModal()">添加服务发现</n-button>
+          </n-space>
+          <TableSkeleton v-if="sdLoading && sds.length === 0" :rows="3" />
+          <EmptyState v-else-if="!sdLoading && sds.length === 0" type="rules" action-text="添加服务发现" @action="openSDModal()" />
+          <n-data-table v-else :columns="sdColumns" :data="sds" :loading="sdLoading" :row-key="(row: any) => row.id" size="small" />
+        </n-tab-pane>
       </n-tabs>
     </n-card>
 
@@ -191,6 +217,51 @@
         </n-space>
       </template>
     </n-modal>
+
+    <!-- Router Modal -->
+    <n-modal v-model:show="showRouterModal" preset="dialog" :title="editingRouter ? '编辑路由' : '添加路由'" style="width: 650px;">
+      <n-form :model="routerForm" label-placement="left" label-width="100">
+        <n-form-item label="名称" required>
+          <n-input v-model:value="routerForm.name" placeholder="例如: 内网路由" />
+        </n-form-item>
+        <n-form-item label="关联节点">
+          <n-select v-model:value="routerForm.node_id" :options="nodeOptions" clearable filterable placeholder="全局 (不关联节点)" />
+        </n-form-item>
+        <n-form-item label="路由规则">
+          <n-input v-model:value="routerForm.routesText" type="textarea" :rows="8" placeholder="每行一条: 目标网段 网关地址&#10;例如:&#10;192.168.0.0/16 192.168.0.1&#10;10.0.0.0/8 10.0.0.1&#10;0.0.0.0/0 172.16.0.1" />
+        </n-form-item>
+      </n-form>
+      <template #action>
+        <n-space>
+          <n-button @click="showRouterModal = false">取消</n-button>
+          <n-button type="primary" :loading="saving" @click="handleSaveRouter">保存</n-button>
+        </n-space>
+      </template>
+    </n-modal>
+
+    <!-- SD Modal -->
+    <n-modal v-model:show="showSDModal" preset="dialog" :title="editingSD ? '编辑服务发现' : '添加服务发现'" style="width: 600px;">
+      <n-form :model="sdForm" label-placement="left" label-width="100">
+        <n-form-item label="名称" required>
+          <n-input v-model:value="sdForm.name" placeholder="例如: Consul 发现" />
+        </n-form-item>
+        <n-form-item label="类型">
+          <n-select v-model:value="sdForm.type" :options="sdTypeOptions" />
+        </n-form-item>
+        <n-form-item label="关联节点">
+          <n-select v-model:value="sdForm.node_id" :options="nodeOptions" clearable filterable placeholder="全局 (不关联节点)" />
+        </n-form-item>
+        <n-form-item label="配置">
+          <n-input v-model:value="sdForm.configText" type="textarea" :rows="6" :placeholder="sdConfigPlaceholder" />
+        </n-form-item>
+      </n-form>
+      <template #action>
+        <n-space>
+          <n-button @click="showSDModal = false">取消</n-button>
+          <n-button type="primary" :loading="saving" @click="handleSaveSD">保存</n-button>
+        </n-space>
+      </template>
+    </n-modal>
   </div>
 </template>
 
@@ -203,6 +274,8 @@ import {
   getHostMappings, createHostMapping, updateHostMapping, deleteHostMapping,
   getIngresses, createIngress, updateIngress, deleteIngress,
   getRecorders, createRecorder, updateRecorder, deleteRecorder,
+  getRouters, createRouter, updateRouter, deleteRouter,
+  getSDs, createSD, updateSD, deleteSD,
   getNodes,
 } from '../api'
 import EmptyState from '../components/EmptyState.vue'
@@ -220,6 +293,8 @@ const admissions = ref<any[]>([])
 const hostMappings = ref<any[]>([])
 const ingresses = ref<any[]>([])
 const recorders = ref<any[]>([])
+const routers = ref<any[]>([])
+const sds = ref<any[]>([])
 const allNodes = ref<any[]>([])
 
 // Loading states
@@ -228,6 +303,8 @@ const admissionLoading = ref(false)
 const hostsLoading = ref(false)
 const ingressLoading = ref(false)
 const recorderLoading = ref(false)
+const routerLoading = ref(false)
+const sdLoading = ref(false)
 
 // Modal states
 const showBypassModal = ref(false)
@@ -235,11 +312,15 @@ const showAdmissionModal = ref(false)
 const showHostsModal = ref(false)
 const showIngressModal = ref(false)
 const showRecorderModal = ref(false)
+const showRouterModal = ref(false)
+const showSDModal = ref(false)
 const editingBypass = ref<any>(null)
 const editingAdmission = ref<any>(null)
 const editingHosts = ref<any>(null)
 const editingIngress = ref<any>(null)
 const editingRecorder = ref<any>(null)
+const editingRouter = ref<any>(null)
+const editingSD = ref<any>(null)
 
 // Forms
 const bypassForm = ref({ name: '', whitelist: false, node_id: null as number | null, matchersText: '' })
@@ -247,6 +328,8 @@ const admissionForm = ref({ name: '', whitelist: false, node_id: null as number 
 const hostsForm = ref({ name: '', node_id: null as number | null, mappingsText: '' })
 const ingressForm = ref({ name: '', node_id: null as number | null, rulesText: '' })
 const recorderForm = ref({ name: '', type: 'file', node_id: null as number | null, configText: '' })
+const routerForm = ref({ name: '', node_id: null as number | null, routesText: '' })
+const sdForm = ref({ name: '', type: 'http', node_id: null as number | null, configText: '' })
 
 const nodeOptions = computed(() =>
   allNodes.value.map((n: any) => ({
@@ -266,6 +349,23 @@ const recorderConfigPlaceholder = computed(() => {
     case 'file': return '{"path": "/var/log/gost/traffic.log"}'
     case 'redis': return '{"addr": "127.0.0.1:6379", "db": 0, "key": "gost:recorder"}'
     case 'http': return '{"url": "http://localhost:8080/api/record", "timeout": 5}'
+    default: return '{}'
+  }
+})
+
+const sdTypeOptions = [
+  { label: 'HTTP', value: 'http' },
+  { label: 'Consul', value: 'consul' },
+  { label: 'Etcd', value: 'etcd' },
+  { label: 'Redis', value: 'redis' },
+]
+
+const sdConfigPlaceholder = computed(() => {
+  switch (sdForm.value.type) {
+    case 'http': return '{"url": "http://localhost:8080/sd", "timeout": 5}'
+    case 'consul': return '{"addr": "127.0.0.1:8500", "token": "", "prefix": "gost"}'
+    case 'etcd': return '{"addr": "127.0.0.1:2379", "prefix": "/gost/services"}'
+    case 'redis': return '{"addr": "127.0.0.1:6379", "db": 0, "key": "gost:sd"}'
     default: return '{}'
   }
 })
@@ -331,6 +431,28 @@ const ingressRulesToText = (json: string): string => {
     const arr = JSON.parse(json)
     if (!Array.isArray(arr)) return ''
     return arr.map((r: any) => `${r.hostname} ${r.endpoint}`).join('\n')
+  } catch { return '' }
+}
+
+// Parse router routes text to JSON
+const parseRouterRoutes = (text: string): string => {
+  const routes: { net: string; gateway: string }[] = []
+  const lines = text.split('\n').map(l => l.trim()).filter(l => l && !l.startsWith('#'))
+  for (const line of lines) {
+    const parts = line.split(/\s+/)
+    if (parts.length >= 2) {
+      routes.push({ net: parts[0]!, gateway: parts[1]! })
+    }
+  }
+  return JSON.stringify(routes)
+}
+
+// Parse router routes JSON to text
+const routerRoutesToText = (json: string): string => {
+  try {
+    const arr = JSON.parse(json)
+    if (!Array.isArray(arr)) return ''
+    return arr.map((r: any) => `${r.net} ${r.gateway}`).join('\n')
   } catch { return '' }
 }
 
@@ -753,6 +875,170 @@ const handleDeleteRecorder = (row: any) => {
   })
 }
 
+// ==================== Router ====================
+const routerColumns = [
+  { title: 'ID', key: 'id', width: 60 },
+  { title: '名称', key: 'name', width: 150 },
+  {
+    title: '路由数', key: 'routes', width: 80,
+    render: (row: any) => countMatchers(row.routes),
+  },
+  {
+    title: '关联节点', key: 'node_id', width: 120,
+    render: (row: any) => {
+      if (!row.node_id) return h(NTag, { size: 'small' }, () => '全局')
+      const node = allNodes.value.find((n: any) => n.id === row.node_id)
+      return node ? node.name : `#${row.node_id}`
+    },
+  },
+  {
+    title: '操作', key: 'actions', width: 150,
+    render: (row: any) => h(NSpace, { size: 'small' }, () => [
+      h(NButton, { size: 'small', onClick: () => openRouterModal(row) }, () => '编辑'),
+      h(NButton, { size: 'small', type: 'error', onClick: () => handleDeleteRouter(row) }, () => '删除'),
+    ]),
+  },
+]
+
+const loadRouters = async () => {
+  routerLoading.value = true
+  try {
+    const data: any = await getRouters()
+    routers.value = data || []
+  } catch { message.error('加载路由失败') }
+  finally { routerLoading.value = false }
+}
+
+const openRouterModal = (row?: any) => {
+  if (row) {
+    editingRouter.value = row
+    routerForm.value = { name: row.name, node_id: row.node_id || null, routesText: routerRoutesToText(row.routes) }
+  } else {
+    editingRouter.value = null
+    routerForm.value = { name: '', node_id: null, routesText: '' }
+  }
+  showRouterModal.value = true
+}
+
+const handleSaveRouter = async () => {
+  if (!routerForm.value.name) { message.error('请输入名称'); return }
+  saving.value = true
+  try {
+    const data = {
+      name: routerForm.value.name,
+      node_id: routerForm.value.node_id || undefined,
+      routes: parseRouterRoutes(routerForm.value.routesText),
+    }
+    if (editingRouter.value) {
+      await updateRouter(editingRouter.value.id, data)
+      message.success('路由已更新')
+    } else {
+      await createRouter(data)
+      message.success('路由已创建')
+    }
+    showRouterModal.value = false
+    loadRouters()
+  } catch (e: any) { message.error(e.response?.data?.error || '保存失败') }
+  finally { saving.value = false }
+}
+
+const handleDeleteRouter = (row: any) => {
+  dialog.warning({
+    title: '删除路由',
+    content: `确定要删除 "${row.name}" 吗？`,
+    positiveText: '删除',
+    negativeText: '取消',
+    onPositiveClick: async () => {
+      try { await deleteRouter(row.id); message.success('已删除'); loadRouters() }
+      catch { message.error('删除失败') }
+    },
+  })
+}
+
+// ==================== SD ====================
+const sdColumns = [
+  { title: 'ID', key: 'id', width: 60 },
+  { title: '名称', key: 'name', width: 150 },
+  {
+    title: '类型', key: 'type', width: 100,
+    render: (row: any) => {
+      const typeMap: Record<string, string> = { http: 'HTTP', consul: 'Consul', etcd: 'Etcd', redis: 'Redis' }
+      return h(NTag, { size: 'small' }, () => typeMap[row.type] || row.type)
+    },
+  },
+  {
+    title: '关联节点', key: 'node_id', width: 120,
+    render: (row: any) => {
+      if (!row.node_id) return h(NTag, { size: 'small' }, () => '全局')
+      const node = allNodes.value.find((n: any) => n.id === row.node_id)
+      return node ? node.name : `#${row.node_id}`
+    },
+  },
+  {
+    title: '操作', key: 'actions', width: 150,
+    render: (row: any) => h(NSpace, { size: 'small' }, () => [
+      h(NButton, { size: 'small', onClick: () => openSDModal(row) }, () => '编辑'),
+      h(NButton, { size: 'small', type: 'error', onClick: () => handleDeleteSD(row) }, () => '删除'),
+    ]),
+  },
+]
+
+const loadSDs = async () => {
+  sdLoading.value = true
+  try {
+    const data: any = await getSDs()
+    sds.value = data || []
+  } catch { message.error('加载服务发现失败') }
+  finally { sdLoading.value = false }
+}
+
+const openSDModal = (row?: any) => {
+  if (row) {
+    editingSD.value = row
+    sdForm.value = { name: row.name, type: row.type || 'http', node_id: row.node_id || null, configText: row.config || '' }
+  } else {
+    editingSD.value = null
+    sdForm.value = { name: '', type: 'http', node_id: null, configText: '' }
+  }
+  showSDModal.value = true
+}
+
+const handleSaveSD = async () => {
+  if (!sdForm.value.name) { message.error('请输入名称'); return }
+  saving.value = true
+  try {
+    const data = {
+      name: sdForm.value.name,
+      type: sdForm.value.type,
+      node_id: sdForm.value.node_id || undefined,
+      config: sdForm.value.configText,
+    }
+    if (editingSD.value) {
+      await updateSD(editingSD.value.id, data)
+      message.success('服务发现已更新')
+    } else {
+      await createSD(data)
+      message.success('服务发现已创建')
+    }
+    showSDModal.value = false
+    loadSDs()
+  } catch (e: any) { message.error(e.response?.data?.error || '保存失败') }
+  finally { saving.value = false }
+}
+
+const handleDeleteSD = (row: any) => {
+  dialog.warning({
+    title: '删除服务发现',
+    content: `确定要删除 "${row.name}" 吗？`,
+    positiveText: '删除',
+    negativeText: '取消',
+    onPositiveClick: async () => {
+      try { await deleteSD(row.id); message.success('已删除'); loadSDs() }
+      catch { message.error('删除失败') }
+    },
+  })
+}
+
 // Load all nodes for selector
 const loadNodes = async () => {
   try {
@@ -768,6 +1054,8 @@ onMounted(() => {
   loadHostMappings()
   loadIngresses()
   loadRecorders()
+  loadRouters()
+  loadSDs()
 })
 </script>
 

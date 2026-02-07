@@ -421,6 +421,29 @@ type Recorder struct {
 	UpdatedAt time.Time `json:"updated_at"`
 }
 
+// Router 路由管理
+type Router struct {
+	ID        uint      `gorm:"primaryKey" json:"id"`
+	Name      string    `gorm:"size:100;not null" json:"name"`
+	Routes    string    `gorm:"type:text" json:"routes"` // JSON: [{"net":"192.168.0.0/16","gateway":"192.168.0.1"}]
+	NodeID    *uint     `gorm:"index" json:"node_id,omitempty"`
+	OwnerID   *uint     `gorm:"index" json:"owner_id,omitempty"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+}
+
+// SD 服务发现
+type SD struct {
+	ID        uint      `gorm:"primaryKey" json:"id"`
+	Name      string    `gorm:"size:100;not null" json:"name"`
+	Type      string    `gorm:"size:20;default:http" json:"type"` // http, consul, etcd, redis
+	Config    string    `gorm:"type:text" json:"config"`          // JSON 配置
+	NodeID    *uint     `gorm:"index" json:"node_id,omitempty"`
+	OwnerID   *uint     `gorm:"index" json:"owner_id,omitempty"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+}
+
 // SiteConfig 网站配置
 type SiteConfig struct {
 	ID        uint      `gorm:"primaryKey" json:"id"`
@@ -445,7 +468,7 @@ func InitDB(dbPath string) (*gorm.DB, error) {
 	}
 
 	// 自动迁移
-	if err := db.AutoMigrate(&Node{}, &Client{}, &Service{}, &User{}, &Plan{}, &TrafficHistory{}, &NotifyChannel{}, &AlertRule{}, &AlertLog{}, &PortForward{}, &NodeGroup{}, &NodeGroupMember{}, &DNSConfig{}, &OperationLog{}, &ProxyChain{}, &ProxyChainHop{}, &Tunnel{}, &SiteConfig{}, &Tag{}, &NodeTag{}, &Bypass{}, &Admission{}, &HostMapping{}, &Ingress{}, &Recorder{}); err != nil {
+	if err := db.AutoMigrate(&Node{}, &Client{}, &Service{}, &User{}, &Plan{}, &TrafficHistory{}, &NotifyChannel{}, &AlertRule{}, &AlertLog{}, &PortForward{}, &NodeGroup{}, &NodeGroupMember{}, &DNSConfig{}, &OperationLog{}, &ProxyChain{}, &ProxyChainHop{}, &Tunnel{}, &SiteConfig{}, &Tag{}, &NodeTag{}, &Bypass{}, &Admission{}, &HostMapping{}, &Ingress{}, &Recorder{}, &Router{}, &SD{}); err != nil {
 		return nil, err
 	}
 

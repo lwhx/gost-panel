@@ -3591,3 +3591,129 @@ func (s *Server) deleteRecorder(c *gin.Context) {
 	s.audit.LogSuccess(c, "delete", "recorder", uint(id), "")
 	c.JSON(http.StatusOK, gin.H{"success": true})
 }
+
+// ==================== Router 路由管理 ====================
+
+func (s *Server) listRouters(c *gin.Context) {
+	userID, isAdmin := getUserInfo(c)
+	routers, err := s.svc.ListRouters(userID, isAdmin)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, routers)
+}
+
+func (s *Server) getRouter(c *gin.Context) {
+	id, _ := strconv.ParseUint(c.Param("id"), 10, 32)
+	router, err := s.svc.GetRouter(uint(id))
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "router not found"})
+		return
+	}
+	c.JSON(http.StatusOK, router)
+}
+
+func (s *Server) createRouter(c *gin.Context) {
+	userID, _ := getUserInfo(c)
+	var router model.Router
+	if err := c.ShouldBindJSON(&router); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	router.OwnerID = &userID
+	if err := s.svc.CreateRouter(&router); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	s.audit.LogSuccess(c, "create", "router", router.ID, router.Name)
+	c.JSON(http.StatusOK, router)
+}
+
+func (s *Server) updateRouter(c *gin.Context) {
+	id, _ := strconv.ParseUint(c.Param("id"), 10, 32)
+	var updates map[string]interface{}
+	if err := c.ShouldBindJSON(&updates); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	if err := s.svc.UpdateRouter(uint(id), updates); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	s.audit.LogSuccess(c, "update", "router", uint(id), "")
+	c.JSON(http.StatusOK, gin.H{"success": true})
+}
+
+func (s *Server) deleteRouter(c *gin.Context) {
+	id, _ := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err := s.svc.DeleteRouter(uint(id)); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	s.audit.LogSuccess(c, "delete", "router", uint(id), "")
+	c.JSON(http.StatusOK, gin.H{"success": true})
+}
+
+// ==================== SD 服务发现 ====================
+
+func (s *Server) listSDs(c *gin.Context) {
+	userID, isAdmin := getUserInfo(c)
+	sds, err := s.svc.ListSDs(userID, isAdmin)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, sds)
+}
+
+func (s *Server) getSD(c *gin.Context) {
+	id, _ := strconv.ParseUint(c.Param("id"), 10, 32)
+	sd, err := s.svc.GetSD(uint(id))
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "sd not found"})
+		return
+	}
+	c.JSON(http.StatusOK, sd)
+}
+
+func (s *Server) createSD(c *gin.Context) {
+	userID, _ := getUserInfo(c)
+	var sd model.SD
+	if err := c.ShouldBindJSON(&sd); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	sd.OwnerID = &userID
+	if err := s.svc.CreateSD(&sd); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	s.audit.LogSuccess(c, "create", "sd", sd.ID, sd.Name)
+	c.JSON(http.StatusOK, sd)
+}
+
+func (s *Server) updateSD(c *gin.Context) {
+	id, _ := strconv.ParseUint(c.Param("id"), 10, 32)
+	var updates map[string]interface{}
+	if err := c.ShouldBindJSON(&updates); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	if err := s.svc.UpdateSD(uint(id), updates); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	s.audit.LogSuccess(c, "update", "sd", uint(id), "")
+	c.JSON(http.StatusOK, gin.H{"success": true})
+}
+
+func (s *Server) deleteSD(c *gin.Context) {
+	id, _ := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err := s.svc.DeleteSD(uint(id)); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	s.audit.LogSuccess(c, "delete", "sd", uint(id), "")
+	c.JSON(http.StatusOK, gin.H{"success": true})
+}

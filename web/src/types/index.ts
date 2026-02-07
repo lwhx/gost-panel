@@ -373,3 +373,25 @@ export type IngressCreateRequest = Record<string, unknown>
 export type IngressUpdateRequest = Record<string, unknown>
 export type RecorderCreateRequest = Record<string, unknown>
 export type RecorderUpdateRequest = Record<string, unknown>
+
+// Router 路由管理
+export interface Router extends BaseEntity {
+  name: string
+  routes: string // JSON: [{"net":"192.168.0.0/16","gateway":"192.168.0.1"}]
+  node_id?: number
+  owner_id?: number
+}
+
+// SD 服务发现
+export interface SD extends BaseEntity {
+  name: string
+  type: string // http, consul, etcd, redis
+  config: string // JSON config
+  node_id?: number
+  owner_id?: number
+}
+
+export type RouterCreateRequest = Record<string, unknown>
+export type RouterUpdateRequest = Record<string, unknown>
+export type SDCreateRequest = Record<string, unknown>
+export type SDUpdateRequest = Record<string, unknown>

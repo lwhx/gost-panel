@@ -335,6 +335,20 @@ func (s *Server) setupRoutes() {
 			auth.POST("/recorders", s.createRecorder)
 			auth.PUT("/recorders/:id", s.updateRecorder)
 			auth.DELETE("/recorders/:id", s.deleteRecorder)
+
+			// Router 路由管理
+			auth.GET("/routers", s.listRouters)
+			auth.GET("/routers/:id", s.getRouter)
+			auth.POST("/routers", s.createRouter)
+			auth.PUT("/routers/:id", s.updateRouter)
+			auth.DELETE("/routers/:id", s.deleteRouter)
+
+			// SD 服务发现
+			auth.GET("/sds", s.listSDs)
+			auth.GET("/sds/:id", s.getSD)
+			auth.POST("/sds", s.createSD)
+			auth.PUT("/sds/:id", s.updateSD)
+			auth.DELETE("/sds/:id", s.deleteSD)
 		}
 	}
 
