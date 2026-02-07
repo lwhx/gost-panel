@@ -2237,3 +2237,179 @@ func (s *Service) CleanupOldVersions(nodeID uint, keepCount int) error {
 	}
 	return nil
 }
+
+// ==================== PlanResource 套餐资源关联 ====================
+
+// GetPlanResources 获取套餐关联的资源
+func (s *Service) GetPlanResources(planID uint) ([]model.PlanResource, error) {
+	var resources []model.PlanResource
+	err := s.db.Where("plan_id = ?", planID).Find(&resources).Error
+	return resources, err
+}
+
+// SetPlanResources 设置套餐关联的资源 (全量替换)
+// resourceType: "node", "tunnel", "port_forward", "proxy_chain", "node_group"
+func (s *Service) SetPlanResources(planID uint, resourceType string, resourceIDs []uint) error {
+	return s.db.Transaction(func(tx *gorm.DB) error {
+		// 先删除该 planID + resourceType 的旧记录
+		if err := tx.Where("plan_id = ? AND resource_type = ?", planID, resourceType).Delete(&model.PlanResource{}).Error; err != nil {
+			return err
+		}
+
+		// 批量插入新记录
+		if len(resourceIDs) > 0 {
+			resources := make([]model.PlanResource, len(resourceIDs))
+			for i, rid := range resourceIDs {
+				resources[i] = model.PlanResource{
+					PlanID:       planID,
+					ResourceType: resourceType,
+					ResourceID:   rid,
+				}
+			}
+			if err := tx.Create(&resources).Error; err != nil {
+				return err
+			}
+		}
+
+		return nil
+	})
+}
+
+// GetPlanResourceIDs 获取套餐指定类型的资源ID列表
+func (s *Service) GetPlanResourceIDs(planID uint, resourceType string) ([]uint, error) {
+	var resources []model.PlanResource
+	if err := s.db.Where("plan_id = ? AND resource_type = ?", planID, resourceType).Find(&resources).Error; err != nil {
+		return nil, err
+	}
+
+	ids := make([]uint, len(resources))
+	for i, r := range resources {
+		ids[i] = r.ResourceID
+	}
+	return ids, nil
+}
+
+// GetUserPlanResourceIDs 获取用户套餐的指定类型资源ID列表
+// 先查用户的 PlanID, 再查 PlanResource
+func (s *Service) GetUserPlanResourceIDs(userID uint, resourceType string) ([]uint, error) {
+	var user model.User
+	if err := s.db.First(&user, userID).Error; err != nil {
+		return nil, err
+	}
+
+	// 用户没有套餐
+	if user.PlanID == nil {
+		return nil, nil
+	}
+
+	return s.GetPlanResourceIDs(*user.PlanID, resourceType)
+}
+
+// CheckPlanResourceLimit 检查用户是否超过套餐资源数量限制
+// resourceType: "node", "client", "tunnel", "port_forward", "proxy_chain", "node_group"
+// 返回: (允许创建, 错误信息)
+func (s *Service) CheckPlanResourceLimit(userID uint, resourceType string) (bool, string) {
+	// 获取用户信息
+	var user model.User
+	if err := s.db.Preload("Plan").First(&user, userID).Error; err != nil {
+		return false, "用户不存在"
+	}
+
+	// 没有套餐，不限制
+	if user.PlanID == nil || user.Plan == nil {
+		return true, ""
+	}
+
+	plan := user.Plan
+
+	// 根据资源类型获取限制和当前数量
+	var maxLimit int
+	var currentCount int64
+
+	switch resourceType {
+	case "node":
+		maxLimit = plan.MaxNodes
+		s.db.Model(&model.Node{}).Where("owner_id = ?", userID).Count(&currentCount)
+	case "client":
+		maxLimit = plan.MaxClients
+		s.db.Model(&model.Client{}).Where("owner_id = ?", userID).Count(&currentCount)
+	case "tunnel":
+		maxLimit = plan.MaxTunnels
+		s.db.Model(&model.Tunnel{}).Where("owner_id = ?", userID).Count(&currentCount)
+	case "port_forward":
+		maxLimit = plan.MaxPortForwards
+		s.db.Model(&model.PortForward{}).Where("owner_id = ?", userID).Count(&currentCount)
+	case "proxy_chain":
+		maxLimit = plan.MaxProxyChains
+		s.db.Model(&model.ProxyChain{}).Where("owner_id = ?", userID).Count(&currentCount)
+	case "node_group":
+		maxLimit = plan.MaxNodeGroups
+		s.db.Model(&model.NodeGroup{}).Where("owner_id = ?", userID).Count(&currentCount)
+	default:
+		return false, "未知的资源类型"
+	}
+
+	// 0 表示无限制
+	if maxLimit == 0 {
+		return true, ""
+	}
+
+	// 检查是否超限
+	if int(currentCount) >= maxLimit {
+		return false, fmt.Sprintf("已达到套餐限制: 最多允许 %d 个%s", maxLimit, getResourceTypeName(resourceType))
+	}
+
+	return true, ""
+}
+
+// CheckPlanNodeAccess 检查用户是否有权使用指定节点
+// 管理员直接返回 true, 无套餐的用户也返回 true (由管理员手动管理)
+// 有套餐的用户: 检查节点是否在套餐的允许节点列表中 (如果套餐没绑定任何节点则不限制)
+func (s *Service) CheckPlanNodeAccess(userID uint, nodeID uint) (bool, string) {
+	// 获取用户信息
+	var user model.User
+	if err := s.db.First(&user, userID).Error; err != nil {
+		return false, "用户不存在"
+	}
+
+	// 没有套餐，不限制
+	if user.PlanID == nil {
+		return true, ""
+	}
+
+	// 获取套餐的节点列表
+	nodeIDs, err := s.GetPlanResourceIDs(*user.PlanID, "node")
+	if err != nil {
+		return false, "查询套餐资源失败"
+	}
+
+	// 套餐没有绑定任何节点，不限制
+	if len(nodeIDs) == 0 {
+		return true, ""
+	}
+
+	// 检查节点是否在允许列表中
+	for _, id := range nodeIDs {
+		if id == nodeID {
+			return true, ""
+		}
+	}
+
+	return false, "该节点不在您的套餐允许范围内"
+}
+
+// getResourceTypeName 获取资源类型的中文名称
+func getResourceTypeName(resourceType string) string {
+	names := map[string]string{
+		"node":         "节点",
+		"client":       "客户端",
+		"tunnel":       "隧道",
+		"port_forward": "端口转发",
+		"proxy_chain":  "代理链",
+		"node_group":   "节点组",
+	}
+	if name, ok := names[resourceType]; ok {
+		return name
+	}
+	return resourceType
+}

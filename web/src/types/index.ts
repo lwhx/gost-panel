@@ -318,6 +318,10 @@ export interface Plan extends BaseEntity {
   duration: number
   max_nodes: number
   max_clients: number
+  max_tunnels?: number
+  max_port_forwards?: number
+  max_proxy_chains?: number
+  max_node_groups?: number
   enabled: boolean
   sort_order: number
   user_count?: number

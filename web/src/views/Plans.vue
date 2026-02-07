@@ -105,6 +105,116 @@
             <span>(0 = 无限制)</span>
           </n-space>
         </n-form-item>
+        <n-form-item label="最大隧道数">
+          <n-space>
+            <n-input-number
+              v-model:value="form.max_tunnels"
+              :min="0"
+              :max="1000"
+              style="width: 150px;"
+              placeholder="0"
+            />
+            <span>(0 = 无限制)</span>
+          </n-space>
+        </n-form-item>
+        <n-form-item label="最大端口转发">
+          <n-space>
+            <n-input-number
+              v-model:value="form.max_port_forwards"
+              :min="0"
+              :max="1000"
+              style="width: 150px;"
+              placeholder="0"
+            />
+            <span>(0 = 无限制)</span>
+          </n-space>
+        </n-form-item>
+        <n-form-item label="最大代理链">
+          <n-space>
+            <n-input-number
+              v-model:value="form.max_proxy_chains"
+              :min="0"
+              :max="1000"
+              style="width: 150px;"
+              placeholder="0"
+            />
+            <span>(0 = 无限制)</span>
+          </n-space>
+        </n-form-item>
+        <n-form-item label="最大节点组">
+          <n-space>
+            <n-input-number
+              v-model:value="form.max_node_groups"
+              :min="0"
+              :max="1000"
+              style="width: 150px;"
+              placeholder="0"
+            />
+            <span>(0 = 无限制)</span>
+          </n-space>
+        </n-form-item>
+        <n-collapse>
+          <n-collapse-item title="资源范围配置" name="resources">
+            <n-alert type="info" style="margin-bottom: 12px;">
+              选择套餐可访问的具体资源。不选择则表示不限制该类型资源。
+            </n-alert>
+            <n-form-item label="可用节点">
+              <n-select
+                v-model:value="planResources.node"
+                multiple
+                :options="allNodes.map(n => ({label: n.name, value: n.id}))"
+                placeholder="不选择则不限制"
+                clearable
+                filterable
+                style="width: 100%;"
+              />
+            </n-form-item>
+            <n-form-item label="可用隧道">
+              <n-select
+                v-model:value="planResources.tunnel"
+                multiple
+                :options="allTunnels.map(t => ({label: t.name, value: t.id}))"
+                placeholder="不选择则不限制"
+                clearable
+                filterable
+                style="width: 100%;"
+              />
+            </n-form-item>
+            <n-form-item label="可用端口转发">
+              <n-select
+                v-model:value="planResources.port_forward"
+                multiple
+                :options="allPortForwards.map(p => ({label: p.name, value: p.id}))"
+                placeholder="不选择则不限制"
+                clearable
+                filterable
+                style="width: 100%;"
+              />
+            </n-form-item>
+            <n-form-item label="可用代理链">
+              <n-select
+                v-model:value="planResources.proxy_chain"
+                multiple
+                :options="allProxyChains.map(c => ({label: c.name, value: c.id}))"
+                placeholder="不选择则不限制"
+                clearable
+                filterable
+                style="width: 100%;"
+              />
+            </n-form-item>
+            <n-form-item label="可用节点组">
+              <n-select
+                v-model:value="planResources.node_group"
+                multiple
+                :options="allNodeGroups.map(g => ({label: g.name, value: g.id}))"
+                placeholder="不选择则不限制"
+                clearable
+                filterable
+                style="width: 100%;"
+              />
+            </n-form-item>
+          </n-collapse-item>
+        </n-collapse>
         <n-divider title-placement="left">其他设置</n-divider>
         <n-form-item label="排序顺序">
           <n-input-number
@@ -130,8 +240,8 @@
 
 <script setup lang="ts">
 import { ref, h, onMounted, computed } from 'vue'
-import { NButton, NSpace, NTag, useMessage, useDialog, NTooltip } from 'naive-ui'
-import { getPlans, createPlan, updatePlan, deletePlan } from '../api'
+import { NButton, NSpace, NTag, useMessage, useDialog, NTooltip, NCollapse, NCollapseItem, NAlert, NSelect } from 'naive-ui'
+import { getPlans, createPlan, updatePlan, deletePlan, getPlanResources, setPlanResources, getNodes, getTunnels, getPortForwards, getProxyChains, getNodeGroups } from '../api'
 import EmptyState from '../components/EmptyState.vue'
 import TableSkeleton from '../components/TableSkeleton.vue'
 import { useKeyboard } from '../composables/useKeyboard'
@@ -145,6 +255,20 @@ const plans = ref<any[]>([])
 const showCreateModal = ref(false)
 const editingPlan = ref<any>(null)
 
+// 资源关联
+const allNodes = ref<any[]>([])
+const allTunnels = ref<any[]>([])
+const allPortForwards = ref<any[]>([])
+const allProxyChains = ref<any[]>([])
+const allNodeGroups = ref<any[]>([])
+const planResources = ref<Record<string, number[]>>({
+  node: [],
+  tunnel: [],
+  port_forward: [],
+  proxy_chain: [],
+  node_group: [],
+})
+
 const defaultForm = () => ({
   name: '',
   description: '',
@@ -153,6 +277,10 @@ const defaultForm = () => ({
   duration: 30,
   max_nodes: 0,
   max_clients: 0,
+  max_tunnels: 0,
+  max_port_forwards: 0,
+  max_proxy_chains: 0,
+  max_node_groups: 0,
   enabled: true,
   sort_order: 0,
 })
@@ -236,13 +364,24 @@ const columns = [
   {
     title: '资源限制',
     key: 'limits',
-    width: 150,
+    width: 200,
     render: (row: any) => {
       const nodes = row.max_nodes || '无限'
       const clients = row.max_clients || '无限'
+      const tunnels = row.max_tunnels || '无限'
+      const pfs = row.max_port_forwards || '无限'
+      const chains = row.max_proxy_chains || '无限'
+      const groups = row.max_node_groups || '无限'
       return h(NTooltip, {}, {
         trigger: () => `${nodes} 节点 / ${clients} 客户端`,
-        default: () => `最大节点: ${nodes}, 最大客户端: ${clients}`
+        default: () => h('div', {}, [
+          h('div', `节点: ${nodes}`),
+          h('div', `客户端: ${clients}`),
+          h('div', `隧道: ${tunnels}`),
+          h('div', `端口转发: ${pfs}`),
+          h('div', `代理链: ${chains}`),
+          h('div', `节点组: ${groups}`)
+        ])
       })
     }
   },
@@ -288,17 +427,64 @@ const loadPlans = async () => {
   }
 }
 
-const openCreateModal = () => {
+// 加载资源选项
+const loadResourceOptions = async () => {
+  try {
+    const [nodes, tunnels, pfs, chains, groups] = await Promise.all([
+      getNodes(),
+      getTunnels(),
+      getPortForwards(),
+      getProxyChains(),
+      getNodeGroups()
+    ])
+    allNodes.value = nodes || []
+    allTunnels.value = tunnels || []
+    allPortForwards.value = pfs || []
+    allProxyChains.value = chains || []
+    allNodeGroups.value = groups || []
+  } catch (e) {
+    message.error('加载资源列表失败')
+  }
+}
+
+const openCreateModal = async () => {
   form.value = defaultForm()
   editingPlan.value = null
+  planResources.value = {
+    node: [],
+    tunnel: [],
+    port_forward: [],
+    proxy_chain: [],
+    node_group: [],
+  }
+  await loadResourceOptions()
   showCreateModal.value = true
 }
 
-const handleEdit = (row: any) => {
+const handleEdit = async (row: any) => {
   editingPlan.value = row
   form.value = {
     ...defaultForm(),
     ...row,
+  }
+  await loadResourceOptions()
+  try {
+    const resources = await getPlanResources(row.id)
+    planResources.value = resources || {
+      node: [],
+      tunnel: [],
+      port_forward: [],
+      proxy_chain: [],
+      node_group: [],
+    }
+  } catch (e) {
+    planResources.value = {
+      node: [],
+      tunnel: [],
+      port_forward: [],
+      proxy_chain: [],
+      node_group: [],
+    }
   }
   showCreateModal.value = true
 }
@@ -311,13 +497,25 @@ const handleSave = async () => {
 
   saving.value = true
   try {
+    let planId: number
     if (editingPlan.value) {
       await updatePlan(editingPlan.value.id, form.value)
+      planId = editingPlan.value.id
       message.success('套餐已更新')
     } else {
-      await createPlan(form.value)
+      const result: any = await createPlan(form.value)
+      planId = result.id
       message.success('套餐已创建')
     }
+
+    // 保存资源关联
+    try {
+      await setPlanResources(planId, planResources.value)
+    } catch (e: any) {
+      console.error('保存资源关联失败:', e)
+      message.warning('套餐已保存，但资源关联配置失败')
+    }
+
     showCreateModal.value = false
     loadPlans()
   } catch (e: any) {

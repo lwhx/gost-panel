@@ -313,6 +313,8 @@ func (s *Server) setupRoutes() {
 			auth.POST("/plans", s.createPlan)
 			auth.PUT("/plans/:id", s.updatePlan)
 			auth.DELETE("/plans/:id", s.deletePlan)
+			auth.GET("/plans/:id/resources", s.getPlanResources)
+			auth.PUT("/plans/:id/resources", s.setPlanResources)
 
 			// Bypass 分流规则
 			auth.GET("/bypasses", s.listBypasses)

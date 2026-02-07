@@ -287,6 +287,11 @@ export const createPlan = (data: PlanCreateRequest) => api.post('/plans', data)
 export const updatePlan = (id: number, data: PlanUpdateRequest) => api.put(`/plans/${id}`, data)
 export const deletePlan = (id: number) => api.delete(`/plans/${id}`)
 
+// 套餐资源关联
+export const getPlanResources = (planId: number) => api.get(`/plans/${planId}/resources`)
+export const setPlanResources = (planId: number, resources: Record<string, number[]>) =>
+  api.put(`/plans/${planId}/resources`, resources)
+
 // 用户套餐操作
 export const assignUserPlan = (userId: number, planId: number) => api.post(`/users/${userId}/assign-plan`, { plan_id: planId })
 export const removeUserPlan = (userId: number) => api.post(`/users/${userId}/remove-plan`)

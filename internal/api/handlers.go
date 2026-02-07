@@ -148,7 +148,16 @@ func (s *Server) createNode(c *gin.Context) {
 		return
 	}
 
-	userID, _ := getUserInfo(c)
+	userID, isAdmin := getUserInfo(c)
+
+	// 检查套餐资源限制
+	if !isAdmin {
+		allowed, msg := s.svc.CheckPlanResourceLimit(userID, "node")
+		if !allowed {
+			c.JSON(http.StatusForbidden, gin.H{"error": msg})
+			return
+		}
+	}
 
 	node := &model.Node{
 		Name:           req.Name,
@@ -804,7 +813,23 @@ func (s *Server) createClient(c *gin.Context) {
 		return
 	}
 
-	userID, _ := getUserInfo(c)
+	userID, isAdmin := getUserInfo(c)
+
+	// 检查套餐资源限制
+	if !isAdmin {
+		allowed, msg := s.svc.CheckPlanResourceLimit(userID, "client")
+		if !allowed {
+			c.JSON(http.StatusForbidden, gin.H{"error": msg})
+			return
+		}
+
+		// 检查节点访问权限
+		allowed, msg = s.svc.CheckPlanNodeAccess(userID, req.NodeID)
+		if !allowed {
+			c.JSON(http.StatusForbidden, gin.H{"error": msg})
+			return
+		}
+	}
 
 	client := &model.Client{
 		Name:          req.Name,
@@ -2029,7 +2054,25 @@ func (s *Server) createPortForward(c *gin.Context) {
 		return
 	}
 
-	userID, _ := getUserInfo(c)
+	userID, isAdmin := getUserInfo(c)
+
+	// 检查套餐资源限制
+	if !isAdmin {
+		allowed, msg := s.svc.CheckPlanResourceLimit(userID, "port_forward")
+		if !allowed {
+			c.JSON(http.StatusForbidden, gin.H{"error": msg})
+			return
+		}
+
+		// 检查节点访问权限
+		if req.NodeID > 0 {
+			allowed, msg = s.svc.CheckPlanNodeAccess(userID, req.NodeID)
+			if !allowed {
+				c.JSON(http.StatusForbidden, gin.H{"error": msg})
+				return
+			}
+		}
+	}
 
 	forward := &model.PortForward{
 		NodeID:     req.NodeID,
@@ -2157,7 +2200,16 @@ func (s *Server) createNodeGroup(c *gin.Context) {
 		return
 	}
 
-	userID, _ := getUserInfo(c)
+	userID, isAdmin := getUserInfo(c)
+
+	// 检查套餐资源限制
+	if !isAdmin {
+		allowed, msg := s.svc.CheckPlanResourceLimit(userID, "node_group")
+		if !allowed {
+			c.JSON(http.StatusForbidden, gin.H{"error": msg})
+			return
+		}
+	}
 
 	// 兼容前端策略值
 	strategy := req.Strategy
@@ -2832,6 +2884,22 @@ func (s *Server) createProxyChain(c *gin.Context) {
 		return
 	}
 
+	userID, isAdmin := getUserInfo(c)
+
+	// 检查套餐资源限制
+	if !isAdmin {
+		allowed, msg := s.svc.CheckPlanResourceLimit(userID, "proxy_chain")
+		if !allowed {
+			c.JSON(http.StatusForbidden, gin.H{"error": msg})
+			return
+		}
+	}
+
+	// 设置所有者
+	if chain.OwnerID == nil {
+		chain.OwnerID = &userID
+	}
+
 	if err := s.svc.CreateProxyChain(&chain); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -2977,6 +3045,36 @@ func (s *Server) createTunnel(c *gin.Context) {
 	if err := c.ShouldBindJSON(&tunnel); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
+	}
+
+	userID, isAdmin := getUserInfo(c)
+
+	// 检查套餐资源限制
+	if !isAdmin {
+		allowed, msg := s.svc.CheckPlanResourceLimit(userID, "tunnel")
+		if !allowed {
+			c.JSON(http.StatusForbidden, gin.H{"error": msg})
+			return
+		}
+
+		// 检查入口节点访问权限
+		allowed, msg = s.svc.CheckPlanNodeAccess(userID, tunnel.EntryNodeID)
+		if !allowed {
+			c.JSON(http.StatusForbidden, gin.H{"error": "入口" + msg})
+			return
+		}
+
+		// 检查出口节点访问权限
+		allowed, msg = s.svc.CheckPlanNodeAccess(userID, tunnel.ExitNodeID)
+		if !allowed {
+			c.JSON(http.StatusForbidden, gin.H{"error": "出口" + msg})
+			return
+		}
+	}
+
+	// 设置所有者
+	if tunnel.OwnerID == nil {
+		tunnel.OwnerID = &userID
 	}
 
 	if err := s.svc.CreateTunnel(&tunnel); err != nil {
@@ -3403,19 +3501,23 @@ func (s *Server) listPlans(c *gin.Context) {
 	for i, plan := range plans {
 		userCount, _ := s.svc.GetPlanUserCount(plan.ID)
 		result[i] = gin.H{
-			"id":            plan.ID,
-			"name":          plan.Name,
-			"description":   plan.Description,
-			"traffic_quota": plan.TrafficQuota,
-			"speed_limit":   plan.SpeedLimit,
-			"duration":      plan.Duration,
-			"max_nodes":     plan.MaxNodes,
-			"max_clients":   plan.MaxClients,
-			"enabled":       plan.Enabled,
-			"sort_order":    plan.SortOrder,
-			"user_count":    userCount,
-			"created_at":    plan.CreatedAt,
-			"updated_at":    plan.UpdatedAt,
+			"id":                plan.ID,
+			"name":              plan.Name,
+			"description":       plan.Description,
+			"traffic_quota":     plan.TrafficQuota,
+			"speed_limit":       plan.SpeedLimit,
+			"duration":          plan.Duration,
+			"max_nodes":         plan.MaxNodes,
+			"max_clients":       plan.MaxClients,
+			"max_tunnels":       plan.MaxTunnels,
+			"max_port_forwards": plan.MaxPortForwards,
+			"max_proxy_chains":  plan.MaxProxyChains,
+			"max_node_groups":   plan.MaxNodeGroups,
+			"enabled":           plan.Enabled,
+			"sort_order":        plan.SortOrder,
+			"user_count":        userCount,
+			"created_at":        plan.CreatedAt,
+			"updated_at":        plan.UpdatedAt,
 		}
 	}
 
@@ -3565,6 +3667,65 @@ func (s *Server) renewUserPlan(c *gin.Context) {
 	if err := s.svc.RenewUserPlan(uint(userID), req.Days); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"success": true})
+}
+
+// ==================== 套餐资源关联 ====================
+
+// getPlanResources 获取套餐关联的资源
+func (s *Server) getPlanResources(c *gin.Context) {
+	id, _ := strconv.ParseUint(c.Param("id"), 10, 32)
+
+	resources, err := s.svc.GetPlanResources(uint(id))
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	// 组织成 map[resourceType][]resourceID 的格式
+	result := make(map[string][]uint)
+	result["node"] = []uint{}
+	result["tunnel"] = []uint{}
+	result["port_forward"] = []uint{}
+	result["proxy_chain"] = []uint{}
+	result["node_group"] = []uint{}
+
+	for _, r := range resources {
+		result[r.ResourceType] = append(result[r.ResourceType], r.ResourceID)
+	}
+
+	c.JSON(http.StatusOK, result)
+}
+
+// setPlanResources 设置套餐关联的资源
+func (s *Server) setPlanResources(c *gin.Context) {
+	_, isAdmin := getUserInfo(c)
+	if !isAdmin {
+		c.JSON(http.StatusForbidden, gin.H{"error": "admin only"})
+		return
+	}
+
+	id, _ := strconv.ParseUint(c.Param("id"), 10, 32)
+
+	var req map[string][]uint
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	// 对每个 resourceType 调用 SetPlanResources
+	validTypes := []string{"node", "tunnel", "port_forward", "proxy_chain", "node_group"}
+	for _, resourceType := range validTypes {
+		resourceIDs, ok := req[resourceType]
+		if !ok {
+			resourceIDs = []uint{}
+		}
+		if err := s.svc.SetPlanResources(uint(id), resourceType, resourceIDs); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
 	}
 
 	c.JSON(http.StatusOK, gin.H{"success": true})

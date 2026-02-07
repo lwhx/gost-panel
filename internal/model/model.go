@@ -275,10 +275,22 @@ type Plan struct {
 	Duration      int       `gorm:"default:30" json:"duration"`              // 有效期 (天), 0=永久
 	MaxNodes      int       `gorm:"default:0" json:"max_nodes"`              // 最大节点数, 0=无限制
 	MaxClients    int       `gorm:"default:0" json:"max_clients"`            // 最大客户端数, 0=无限制
+	MaxTunnels      int  `gorm:"default:0" json:"max_tunnels"`             // 最大隧道数, 0=无限制
+	MaxPortForwards int  `gorm:"default:0" json:"max_port_forwards"`       // 最大端口转发数, 0=无限制
+	MaxProxyChains  int  `gorm:"default:0" json:"max_proxy_chains"`        // 最大代理链数, 0=无限制
+	MaxNodeGroups   int  `gorm:"default:0" json:"max_node_groups"`         // 最大节点组数, 0=无限制
 	Enabled       bool      `gorm:"default:true" json:"enabled"`             // 是否启用
 	SortOrder     int       `gorm:"default:0" json:"sort_order"`             // 排序顺序
 	CreatedAt     time.Time `json:"created_at"`
 	UpdatedAt     time.Time `json:"updated_at"`
+}
+
+// PlanResource 套餐资源关联 (定义套餐可使用的资源范围)
+type PlanResource struct {
+	ID           uint   `gorm:"primaryKey" json:"id"`
+	PlanID       uint   `gorm:"index;not null" json:"plan_id"`
+	ResourceType string `gorm:"size:50;not null;index" json:"resource_type"` // node, tunnel, port_forward, proxy_chain, node_group
+	ResourceID   uint   `gorm:"not null" json:"resource_id"`
 }
 
 // TrafficHistory 流量历史记录
@@ -483,7 +495,7 @@ func InitDB(dbPath string) (*gorm.DB, error) {
 	}
 
 	// 自动迁移
-	if err := db.AutoMigrate(&Node{}, &Client{}, &Service{}, &User{}, &Plan{}, &TrafficHistory{}, &NotifyChannel{}, &AlertRule{}, &AlertLog{}, &PortForward{}, &NodeGroup{}, &NodeGroupMember{}, &DNSConfig{}, &OperationLog{}, &ProxyChain{}, &ProxyChainHop{}, &Tunnel{}, &SiteConfig{}, &Tag{}, &NodeTag{}, &Bypass{}, &Admission{}, &HostMapping{}, &Ingress{}, &Recorder{}, &Router{}, &SD{}, &ConfigVersion{}); err != nil {
+	if err := db.AutoMigrate(&Node{}, &Client{}, &Service{}, &User{}, &Plan{}, &PlanResource{}, &TrafficHistory{}, &NotifyChannel{}, &AlertRule{}, &AlertLog{}, &PortForward{}, &NodeGroup{}, &NodeGroupMember{}, &DNSConfig{}, &OperationLog{}, &ProxyChain{}, &ProxyChainHop{}, &Tunnel{}, &SiteConfig{}, &Tag{}, &NodeTag{}, &Bypass{}, &Admission{}, &HostMapping{}, &Ingress{}, &Recorder{}, &Router{}, &SD{}, &ConfigVersion{}); err != nil {
 		return nil, err
 	}
 
