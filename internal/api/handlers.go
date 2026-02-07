@@ -125,17 +125,12 @@ type CreateNodeRequest struct {
 	TrafficQuota  int64  `json:"traffic_quota"`
 	QuotaResetDay int    `json:"quota_reset_day"`
 	// 协议配置
-	Protocol      string `json:"protocol"`       // socks5/http/ss/trojan/vmess/relay
+	Protocol      string `json:"protocol"`       // socks5/http/ss/socks4/http2/ssu/auto/relay
 	Transport     string `json:"transport"`      // tcp/tls/ws/wss/h2/h2c/quic/kcp
 	TransportOpts string `json:"transport_opts"` // 传输层配置 JSON
 	// Shadowsocks
 	SSMethod   string `json:"ss_method"`
 	SSPassword string `json:"ss_password"`
-	// Trojan
-	TrojanPassword string `json:"trojan_password"`
-	// VMess
-	VMessUUID    string `json:"vmess_uuid"`
-	VMessAlterID int    `json:"vmess_alter_id"`
 	// TLS
 	TLSEnabled  bool   `json:"tls_enabled"`
 	TLSCertFile string `json:"tls_cert_file"`
@@ -185,9 +180,6 @@ func (s *Server) createNode(c *gin.Context) {
 		TransportOpts:  req.TransportOpts,
 		SSMethod:       req.SSMethod,
 		SSPassword:     req.SSPassword,
-		TrojanPassword: req.TrojanPassword,
-		VMessUUID:      req.VMessUUID,
-		VMessAlterID:   req.VMessAlterID,
 		TLSEnabled:     req.TLSEnabled,
 		TLSCertFile:    req.TLSCertFile,
 		TLSKeyFile:     req.TLSKeyFile,
@@ -561,9 +553,6 @@ func (s *Server) cloneNode(c *gin.Context) {
 		TransportOpts:    node.TransportOpts,
 		SSMethod:         node.SSMethod,
 		SSPassword:       node.SSPassword,
-		TrojanPassword:   node.TrojanPassword,
-		VMessUUID:        node.VMessUUID,
-		VMessAlterID:     node.VMessAlterID,
 		TLSEnabled:       node.TLSEnabled,
 		TLSCertFile:      node.TLSCertFile,
 		TLSKeyFile:       node.TLSKeyFile,
@@ -2964,8 +2953,6 @@ type ExportNode struct {
 	ProxyPass     string `json:"proxy_pass,omitempty" yaml:"proxy_pass,omitempty"`
 	SSMethod      string `json:"ss_method,omitempty" yaml:"ss_method,omitempty"`
 	SSPassword    string `json:"ss_password,omitempty" yaml:"ss_password,omitempty"`
-	TrojanPassword string `json:"trojan_password,omitempty" yaml:"trojan_password,omitempty"`
-	VMessUUID     string `json:"vmess_uuid,omitempty" yaml:"vmess_uuid,omitempty"`
 	TLSEnabled    bool   `json:"tls_enabled" yaml:"tls_enabled"`
 	TLSSNI        string `json:"tls_sni,omitempty" yaml:"tls_sni,omitempty"`
 	WSPath        string `json:"ws_path,omitempty" yaml:"ws_path,omitempty"`
@@ -3018,8 +3005,6 @@ func (s *Server) exportData(c *gin.Context) {
 				ProxyPass:     n.ProxyPass,
 				SSMethod:      n.SSMethod,
 				SSPassword:    n.SSPassword,
-				TrojanPassword: n.TrojanPassword,
-				VMessUUID:     n.VMessUUID,
 				TLSEnabled:    n.TLSEnabled,
 				TLSSNI:        n.TLSSNI,
 				WSPath:        n.WSPath,
@@ -3142,8 +3127,6 @@ func (s *Server) importData(c *gin.Context) {
 			ProxyPass:      n.ProxyPass,
 			SSMethod:       n.SSMethod,
 			SSPassword:     n.SSPassword,
-			TrojanPassword: n.TrojanPassword,
-			VMessUUID:      n.VMessUUID,
 			TLSEnabled:     n.TLSEnabled,
 			TLSSNI:         n.TLSSNI,
 			WSPath:         n.WSPath,

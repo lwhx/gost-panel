@@ -231,18 +231,36 @@ func (g *ConfigGenerator) generateHandler(node *model.Node) map[string]interface
 		}
 
 	case "trojan":
-		handler["type"] = "trojan"
-		handler["auth"] = map[string]string{
-			"password": node.TrojanPassword,
-		}
+		// Trojan 不是 GOST v3 原生协议, 按 relay 处理
+		handler["type"] = "relay"
 
 	case "vmess":
-		handler["type"] = "vmess"
+		// VMess 不是 GOST v3 原生协议, 按 relay 处理
+		handler["type"] = "relay"
+
+	case "auto":
+		handler["type"] = "auto"
+
+	case "socks4":
+		handler["type"] = "socks4"
+
+	case "http2":
+		handler["type"] = "http2"
+
+	case "ssu":
+		handler["type"] = "ssu"
 		handler["auth"] = map[string]string{
-			"username": node.VMessUUID,
+			"username": node.SSMethod,
+			"password": node.SSPassword,
 		}
+
+	case "redu":
+		handler["type"] = "redu"
+
+	case "tap":
+		handler["type"] = "tap"
 		handler["metadata"] = map[string]interface{}{
-			"alterID": node.VMessAlterID,
+			"net": "198.18.0.0/15",
 		}
 
 	case "relay":
@@ -296,8 +314,18 @@ func (g *ConfigGenerator) generateListener(node *model.Node) map[string]interfac
 	case "redirect":
 		listener["type"] = "redirect"
 		return listener
+	case "redu":
+		listener["type"] = "redu"
+		return listener
 	case "tun":
 		listener["type"] = "tun"
+		return listener
+	case "tap":
+		listener["type"] = "tap"
+		return listener
+	case "http2":
+		listener["type"] = "http2"
+		listener["tls"] = g.generateTLSConfig(node)
 		return listener
 	}
 
@@ -437,6 +465,23 @@ func (g *ConfigGenerator) generateListener(node *model.Node) map[string]interfac
 
 	case "otls":
 		listener["type"] = "otls"
+
+	case "mtcp":
+		listener["type"] = "mtcp"
+
+	case "h3":
+		listener["type"] = "h3"
+		listener["tls"] = g.generateTLSConfig(node)
+
+	case "wt":
+		listener["type"] = "wt"
+		listener["tls"] = g.generateTLSConfig(node)
+
+	case "ftcp":
+		listener["type"] = "ftcp"
+
+	case "icmp":
+		listener["type"] = "icmp"
 
 	case "redirect":
 		listener["type"] = "redirect"

@@ -58,8 +58,6 @@ export interface Node extends BaseEntity {
   transport_opts?: string
   // Shadowsocks
   ss_method?: string
-  // VMess
-  vmess_alter_id?: number
   // TLS
   tls_enabled?: boolean
   tls_cert_file?: string

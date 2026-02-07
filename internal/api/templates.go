@@ -26,7 +26,6 @@ type NodeTemplateDefaults struct {
 	SSMethod       string `json:"ss_method,omitempty"`
 	RequireAuth    bool   `json:"require_auth"`
 	RequireTLS     bool   `json:"require_tls"`
-	RequireUUID    bool   `json:"require_uuid"`
 	RequirePassword bool  `json:"require_password"`
 }
 
@@ -56,6 +55,31 @@ var nodeTemplates = []NodeTemplate{
 			Protocol:    "http",
 			Transport:   "tcp",
 			Port:        8080,
+			RequireAuth: true,
+		},
+	},
+	{
+		ID:          "socks4-basic",
+		Name:        "SOCKS4 代理",
+		Description: "SOCKS4/SOCKS4A 代理，兼容旧客户端",
+		Category:    "basic",
+		Icon:        "server",
+		Defaults: NodeTemplateDefaults{
+			Protocol:  "socks4",
+			Transport: "tcp",
+			Port:      1080,
+		},
+	},
+	{
+		ID:          "auto-detect",
+		Name:        "Auto 多协议探测",
+		Description: "一个端口同时支持 HTTP/SOCKS4/SOCKS5，自动识别",
+		Category:    "basic",
+		Icon:        "flash",
+		Defaults: NodeTemplateDefaults{
+			Protocol:    "auto",
+			Transport:   "tcp",
+			Port:        1080,
 			RequireAuth: true,
 		},
 	},
@@ -104,66 +128,6 @@ var nodeTemplates = []NodeTemplate{
 			Port:            8388,
 			SSMethod:        "aes-256-gcm",
 			RequirePassword: true,
-		},
-	},
-	{
-		ID:          "trojan",
-		Name:        "Trojan",
-		Description: "Trojan 协议，TLS 加密，难以检测",
-		Category:    "secure",
-		Icon:        "shield-checkmark",
-		Defaults: NodeTemplateDefaults{
-			Protocol:        "trojan",
-			Transport:       "tls",
-			Port:            443,
-			TLSEnabled:      true,
-			RequireTLS:      true,
-			RequirePassword: true,
-		},
-	},
-	{
-		ID:          "trojan-ws",
-		Name:        "Trojan + WebSocket",
-		Description: "Trojan over WebSocket，可过 CDN",
-		Category:    "secure",
-		Icon:        "shield-checkmark",
-		Defaults: NodeTemplateDefaults{
-			Protocol:        "trojan",
-			Transport:       "wss",
-			Port:            443,
-			TLSEnabled:      true,
-			WSPath:          "/trojan",
-			RequireTLS:      true,
-			RequirePassword: true,
-		},
-	},
-	{
-		ID:          "vmess",
-		Name:        "VMess",
-		Description: "V2Ray VMess 协议",
-		Category:    "secure",
-		Icon:        "rocket",
-		Defaults: NodeTemplateDefaults{
-			Protocol:    "vmess",
-			Transport:   "tcp",
-			Port:        10086,
-			RequireUUID: true,
-		},
-	},
-	{
-		ID:          "vmess-ws-tls",
-		Name:        "VMess + WebSocket + TLS",
-		Description: "V2Ray 经典配置，可过 CDN",
-		Category:    "secure",
-		Icon:        "rocket",
-		Defaults: NodeTemplateDefaults{
-			Protocol:    "vmess",
-			Transport:   "wss",
-			Port:        443,
-			TLSEnabled:  true,
-			WSPath:      "/vmess",
-			RequireTLS:  true,
-			RequireUUID: true,
 		},
 	},
 

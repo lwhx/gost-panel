@@ -136,30 +136,13 @@
               </n-form-item>
             </template>
 
-            <!-- Shadowsocks -->
-            <template v-if="form.protocol === 'ss'">
+            <!-- Shadowsocks / SSU -->
+            <template v-if="form.protocol === 'ss' || form.protocol === 'ssu'">
               <n-form-item label="加密方式">
                 <n-select v-model:value="form.ss_method" :options="ssMethodOptions" style="width: 250px" />
               </n-form-item>
               <n-form-item label="SS 密码">
                 <n-input v-model:value="form.ss_password" type="password" placeholder="Shadowsocks 密码" />
-              </n-form-item>
-            </template>
-
-            <!-- Trojan -->
-            <template v-if="form.protocol === 'trojan'">
-              <n-form-item label="密码">
-                <n-input v-model:value="form.trojan_password" type="password" placeholder="Trojan 密码" />
-              </n-form-item>
-            </template>
-
-            <!-- VMess -->
-            <template v-if="form.protocol === 'vmess'">
-              <n-form-item label="UUID">
-                <n-input v-model:value="form.vmess_uuid" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" />
-              </n-form-item>
-              <n-form-item label="Alter ID">
-                <n-input-number v-model:value="form.vmess_alter_id" :min="0" :max="64" />
               </n-form-item>
             </template>
           </n-form>
@@ -582,18 +565,22 @@ const pagination = ref({
 // 协议选项
 const protocolOptions = [
   { label: 'SOCKS5', value: 'socks5' },
+  { label: 'SOCKS4/4A', value: 'socks4' },
   { label: 'HTTP/HTTPS', value: 'http' },
-  { label: 'Shadowsocks', value: 'ss' },
-  { label: 'Trojan', value: 'trojan' },
-  { label: 'VMess', value: 'vmess' },
+  { label: 'HTTP/2 代理', value: 'http2' },
+  { label: 'Shadowsocks (SS)', value: 'ss' },
+  { label: 'Shadowsocks UDP (SSU)', value: 'ssu' },
+  { label: 'Auto (多协议探测)', value: 'auto' },
   { label: 'Relay (Port Forward)', value: 'relay' },
   { label: 'TCP Forward', value: 'tcp' },
   { label: 'UDP Forward', value: 'udp' },
   { label: 'SNI', value: 'sni' },
   { label: 'DNS', value: 'dns' },
   { label: 'SSH Tunnel (SSHD)', value: 'sshd' },
-  { label: 'Redirect (透明代理)', value: 'redirect' },
+  { label: 'Redirect (TCP 透明代理)', value: 'redirect' },
+  { label: 'REDU (UDP 透明代理)', value: 'redu' },
   { label: 'TUN (全局代理)', value: 'tun' },
+  { label: 'TAP (二层网络)', value: 'tap' },
 ]
 
 // 传输层选项
@@ -602,7 +589,8 @@ const transportOptions = [
   { label: 'UDP', value: 'udp' },
   { label: 'TCP + UDP', value: 'tcp+udp' },
   { label: 'TLS', value: 'tls' },
-  { label: 'mTLS', value: 'mtls' },
+  { label: 'mTLS (多路复用)', value: 'mtls' },
+  { label: 'mTCP (多路复用)', value: 'mtcp' },
   { label: 'WebSocket (WS)', value: 'ws' },
   { label: 'WebSocket + TLS (WSS)', value: 'wss' },
   { label: 'Multiplex WS (mWS)', value: 'mws' },
@@ -610,6 +598,8 @@ const transportOptions = [
   { label: 'HTTP/2 (H2)', value: 'h2' },
   { label: 'HTTP/2 Clear (H2C)', value: 'h2c' },
   { label: 'HTTP/3', value: 'http3' },
+  { label: 'HTTP/3 Tunnel (H3)', value: 'h3' },
+  { label: 'WebTransport (WT)', value: 'wt' },
   { label: 'QUIC', value: 'quic' },
   { label: 'KCP', value: 'kcp' },
   { label: 'gRPC', value: 'grpc' },
@@ -619,6 +609,8 @@ const transportOptions = [
   { label: 'DTLS', value: 'dtls' },
   { label: 'Obfs-HTTP', value: 'ohttp' },
   { label: 'Obfs-TLS', value: 'otls' },
+  { label: 'Fake TCP (FTCP)', value: 'ftcp' },
+  { label: 'ICMP Tunnel', value: 'icmp' },
 ]
 
 // SS 加密方法
@@ -667,9 +659,6 @@ const defaultForm = () => ({
   transport: 'tcp',
   ss_method: 'aes-256-gcm',
   ss_password: '',
-  trojan_password: '',
-  vmess_uuid: '',
-  vmess_alter_id: 0,
   tls_enabled: false,
   tls_cert_file: '',
   tls_key_file: '',
@@ -1114,14 +1103,9 @@ const applyTemplate = () => {
     form.value.proxy_pass = generatePassword(16)
   }
   if (defaults.require_password) {
-    if (defaults.protocol === 'ss') {
+    if (defaults.protocol === 'ss' || defaults.protocol === 'ssu') {
       form.value.ss_password = generatePassword(24)
-    } else if (defaults.protocol === 'trojan') {
-      form.value.trojan_password = generatePassword(24)
     }
-  }
-  if (defaults.require_uuid) {
-    form.value.vmess_uuid = generateUUID()
   }
 
   // 生成 API 密码
@@ -1141,14 +1125,6 @@ const generatePassword = (length: number) => {
     result += chars.charAt(Math.floor(Math.random() * chars.length))
   }
   return result
-}
-
-const generateUUID = () => {
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
-    const r = Math.random() * 16 | 0
-    const v = c === 'x' ? r : (r & 0x3 | 0x8)
-    return v.toString(16)
-  })
 }
 
 // ==================== 标签管理 ====================

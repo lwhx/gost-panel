@@ -13,14 +13,12 @@ func GenerateProxyURI(node *model.Node) string {
 	switch node.Protocol {
 	case "socks5":
 		return generateSocks5URI(node)
+	case "socks4":
+		return generateSocks4URI(node)
 	case "http":
 		return generateHTTPURI(node)
 	case "ss":
 		return generateShadowsocksURI(node)
-	case "trojan":
-		return generateTrojanURI(node)
-	case "vmess":
-		return generateVMessURI(node)
 	default:
 		return generateSocks5URI(node)
 	}
@@ -34,6 +32,11 @@ func generateSocks5URI(node *model.Node) string {
 	}
 	uri += fmt.Sprintf("%s:%d", node.Host, node.Port)
 	return uri
+}
+
+func generateSocks4URI(node *model.Node) string {
+	// socks4://host:port
+	return fmt.Sprintf("socks4://%s:%d", node.Host, node.Port)
 }
 
 func generateHTTPURI(node *model.Node) string {
@@ -55,24 +58,4 @@ func generateShadowsocksURI(node *model.Node) string {
 	userinfo := fmt.Sprintf("%s:%s", method, node.SSPassword)
 	encoded := base64.URLEncoding.EncodeToString([]byte(userinfo))
 	return fmt.Sprintf("ss://%s@%s:%d#%s", encoded, node.Host, node.Port, url.QueryEscape(node.Name))
-}
-
-func generateTrojanURI(node *model.Node) string {
-	// trojan://password@host:port?sni=xxx#name
-	uri := fmt.Sprintf("trojan://%s@%s:%d", url.QueryEscape(node.TrojanPassword), node.Host, node.Port)
-	params := url.Values{}
-	if node.TLSSNI != "" {
-		params.Set("sni", node.TLSSNI)
-	}
-	if len(params) > 0 {
-		uri += "?" + params.Encode()
-	}
-	uri += "#" + url.QueryEscape(node.Name)
-	return uri
-}
-
-func generateVMessURI(node *model.Node) string {
-	// vmess://base64(json)
-	// 简化的 VMess 链接
-	return fmt.Sprintf("vmess://%s:%d (UUID: %s)", node.Host, node.Port, node.VMessUUID)
 }

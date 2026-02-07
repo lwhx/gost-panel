@@ -11,8 +11,8 @@
 
 ### 协议与传输
 
-- **13 种代理协议**: SOCKS5, HTTP, Shadowsocks, Trojan, VMess, Relay, TCP, UDP, SNI, DNS, SSH, Redirect (透明代理), TUN (全局代理)
-- **21 种传输方式**: TCP, UDP, TCP+UDP, TLS, mTLS, WS, WSS, H2, H2C, QUIC, KCP, gRPC, PHT, PHTS, mWS, mWSS, HTTP/3, DTLS, SSH, oHTTP, oTLS
+- **17 种代理协议**: SOCKS5, SOCKS4/4A, HTTP, HTTP/2, Shadowsocks (SS), Shadowsocks UDP (SSU), Auto (多协议探测), Relay, TCP, UDP, SNI, DNS, SSH, Redirect (TCP 透明代理), REDU (UDP 透明代理), TUN (全局代理), TAP (二层网络)
+- **26 种传输方式**: TCP, UDP, TCP+UDP, TLS, mTLS, mTCP, WS, WSS, mWS, mWSS, H2, H2C, HTTP/3, H3 (HTTP/3 Tunnel), WebTransport (WT), QUIC, KCP, gRPC, PHT, PHTS, SSH, DTLS, Obfs-HTTP, Obfs-TLS, Fake TCP (FTCP), ICMP Tunnel
 - **端口转发**: TCP/UDP/RTCP (远程反向 TCP)/RUDP (远程反向 UDP)/Relay 中继，支持代理链
 - **隧道转发**: 入口节点 → 出口节点链式代理
 - **代理链**: 多跳代理，自定义跳点顺序
@@ -84,6 +84,14 @@ curl -fsSL https://raw.githubusercontent.com/AliceNetworks/gost-panel/main/scrip
 安装完成后访问 `http://your-ip:8080` 即可使用。
 
 **升级面板：** 重新执行上述命令即可。
+
+### 一键卸载
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/AliceNetworks/gost-panel/main/scripts/uninstall.sh | bash
+```
+
+卸载时可选择保留数据库备份。
 
 ### 二进制手动安装
 
@@ -246,7 +254,7 @@ gost-panel/
 │   ├── src/api/     # API 调用
 │   ├── src/stores/  # Pinia 状态管理
 │   └── src/types/   # TypeScript 类型定义
-└── scripts/         # 构建和部署脚本
+└── scripts/         # 安装/卸载/构建脚本
 ```
 
 ## 技术栈

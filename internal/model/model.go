@@ -28,17 +28,12 @@ type Node struct {
 	TrafficOut  int64     `gorm:"default:0" json:"traffic_out"`         // 出站流量 (bytes)
 	Connections int       `gorm:"default:0" json:"connections"`         // 当前连接数
 	// 协议配置
-	Protocol      string `gorm:"size:50;default:socks5" json:"protocol"`    // socks5/http/ss/trojan/vmess/relay
-	Transport     string `gorm:"size:50;default:tcp" json:"transport"`      // tcp/tls/ws/wss/h2/h2c/quic/kcp
+	Protocol      string `gorm:"size:50;default:socks5" json:"protocol"`    // socks5/http/ss/socks4/http2/ssu/auto/relay/tcp/udp/sni/dns/sshd/redirect/redu/tun/tap
+	Transport     string `gorm:"size:50;default:tcp" json:"transport"`      // tcp/tls/ws/wss/h2/h2c/quic/kcp/grpc/mtls/mtcp/h3/wt/ftcp/icmp 等
 	TransportOpts string `gorm:"type:text" json:"transport_opts"`           // 传输层配置 JSON
 	// Shadowsocks 配置
 	SSMethod   string `gorm:"size:50" json:"ss_method"`                     // aes-256-gcm/chacha20-ietf-poly1305 等
 	SSPassword string `gorm:"size:100" json:"-"`                            // SS 密码 (隐藏)
-	// Trojan 配置
-	TrojanPassword string `gorm:"size:100" json:"-"`                        // Trojan 密码 (隐藏)
-	// VMess 配置
-	VMessUUID    string `gorm:"size:100" json:"-"`                          // VMess UUID (隐藏)
-	VMessAlterID int    `gorm:"default:0" json:"vmess_alter_id"`
 	// TLS 配置
 	TLSEnabled  bool   `gorm:"default:false" json:"tls_enabled"`
 	TLSCertFile string `gorm:"size:255" json:"tls_cert_file"`
@@ -104,7 +99,7 @@ type Service struct {
 	NodeID    uint      `gorm:"index" json:"node_id"`                  // 所属节点
 	ClientID  *uint     `gorm:"index" json:"client_id,omitempty"`      // 所属客户端 (可选)
 	Name      string    `gorm:"size:100;not null" json:"name"`         // 服务名称
-	Type      string    `gorm:"size:50;not null" json:"type"`          // socks5/http/ss/trojan/vmess/relay/tcp/udp/rtcp/rudp
+	Type      string    `gorm:"size:50;not null" json:"type"`          // socks5/http/ss/relay/tcp/udp/rtcp/rudp
 	Listen    string    `gorm:"size:255" json:"listen"`                // 监听地址
 	Forward   string    `gorm:"size:255" json:"forward"`               // 转发地址
 	Options   string    `gorm:"type:text" json:"options"`              // JSON 选项
