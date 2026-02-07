@@ -5,6 +5,16 @@
         <n-space justify="space-between" align="center">
           <span>用户管理</span>
           <n-space>
+            <n-input
+              v-model:value="searchText"
+              placeholder="搜索用户名、邮箱、角色..."
+              clearable
+              style="width: 250px;"
+            >
+              <template #prefix>
+                <span>🔍</span>
+              </template>
+            </n-input>
             <n-button type="primary" @click="openCreateModal">
               添加用户
             </n-button>
@@ -26,11 +36,18 @@
         @action="openCreateModal"
       />
 
+      <!-- 搜索无结果 -->
+      <EmptyState
+        v-else-if="searchText && filteredUsers.length === 0"
+        type="search"
+        :description="`未找到包含 '${searchText}' 的用户`"
+      />
+
       <!-- 数据表格 -->
       <n-data-table
         v-else
         :columns="columns"
-        :data="users"
+        :data="filteredUsers"
         :loading="loading"
         :row-key="(row: any) => row.id"
       />
@@ -202,6 +219,7 @@ const loading = ref(false)
 const saving = ref(false)
 const changingPassword = ref(false)
 const users = ref<any[]>([])
+const searchText = ref('')
 const showCreateModal = ref(false)
 const showPasswordModal = ref(false)
 const showPlanModal = ref(false)
@@ -210,6 +228,17 @@ const planUser = ref<any>(null)
 const plans = ref<any[]>([])
 const selectedPlanId = ref<number | null>(null)
 const renewDays = ref(30)
+
+// 搜索过滤
+const filteredUsers = computed(() => {
+  if (!searchText.value) return users.value
+  const search = searchText.value.toLowerCase()
+  return users.value.filter((user: any) =>
+    user.username?.toLowerCase().includes(search) ||
+    user.email?.toLowerCase().includes(search) ||
+    user.role?.toLowerCase().includes(search)
+  )
+})
 
 // 套餐选项
 const planOptions = computed(() => plans.value.map((p: any) => ({

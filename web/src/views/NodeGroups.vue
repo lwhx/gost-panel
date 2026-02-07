@@ -4,9 +4,21 @@
       <template #header>
         <n-space justify="space-between" align="center">
           <span>节点组 / 负载均衡</span>
-          <n-button type="primary" @click="openCreateModal">
-            添加节点组
-          </n-button>
+          <n-space>
+            <n-input
+              v-model:value="searchText"
+              placeholder="搜索节点组名称、策略..."
+              clearable
+              style="width: 250px;"
+            >
+              <template #prefix>
+                <span>🔍</span>
+              </template>
+            </n-input>
+            <n-button type="primary" @click="openCreateModal">
+              添加节点组
+            </n-button>
+          </n-space>
         </n-space>
       </template>
 
@@ -21,11 +33,18 @@
         @action="openCreateModal"
       />
 
+      <!-- 搜索无结果 -->
+      <EmptyState
+        v-else-if="searchText && filteredNodeGroups.length === 0"
+        type="search"
+        :description="`未找到包含 '${searchText}' 的节点组`"
+      />
+
       <!-- 数据表格 -->
       <n-data-table
         v-else
         :columns="columns"
-        :data="nodeGroups"
+        :data="filteredNodeGroups"
         :loading="loading"
         :row-key="(row: any) => row.id"
       />
@@ -143,6 +162,7 @@ const saving = ref(false)
 const membersLoading = ref(false)
 const addingMember = ref(false)
 const nodeGroups = ref<any[]>([])
+const searchText = ref('')
 const members = ref<any[]>([])
 const allNodes = ref<any[]>([])
 const showCreateModal = ref(false)
@@ -152,6 +172,16 @@ const showConfigModal = ref(false)
 const configContent = ref('')
 const editingGroup = ref<any>(null)
 const currentGroup = ref<any>(null)
+
+// 搜索过滤
+const filteredNodeGroups = computed(() => {
+  if (!searchText.value) return nodeGroups.value
+  const search = searchText.value.toLowerCase()
+  return nodeGroups.value.filter((group: any) =>
+    group.name?.toLowerCase().includes(search) ||
+    group.strategy?.toLowerCase().includes(search)
+  )
+})
 
 const strategyOptions = [
   { label: '轮询 (Round Robin)', value: 'round_robin' },

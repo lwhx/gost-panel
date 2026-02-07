@@ -354,6 +354,7 @@ func (s *Server) setupRoutes() {
 			auth.POST("/bypasses", s.createBypass)
 			auth.PUT("/bypasses/:id", s.updateBypass)
 			auth.DELETE("/bypasses/:id", s.deleteBypass)
+			auth.POST("/bypasses/:id/clone", s.cloneBypass)
 
 			// Admission 准入控制
 			auth.GET("/admissions", s.listAdmissions)
@@ -361,6 +362,7 @@ func (s *Server) setupRoutes() {
 			auth.POST("/admissions", s.createAdmission)
 			auth.PUT("/admissions/:id", s.updateAdmission)
 			auth.DELETE("/admissions/:id", s.deleteAdmission)
+			auth.POST("/admissions/:id/clone", s.cloneAdmission)
 
 			// HostMapping 主机映射
 			auth.GET("/host-mappings", s.listHostMappings)
@@ -368,6 +370,7 @@ func (s *Server) setupRoutes() {
 			auth.POST("/host-mappings", s.createHostMapping)
 			auth.PUT("/host-mappings/:id", s.updateHostMapping)
 			auth.DELETE("/host-mappings/:id", s.deleteHostMapping)
+			auth.POST("/host-mappings/:id/clone", s.cloneHostMapping)
 
 			// Ingress 反向代理
 			auth.GET("/ingresses", s.listIngresses)
@@ -375,6 +378,7 @@ func (s *Server) setupRoutes() {
 			auth.POST("/ingresses", s.createIngress)
 			auth.PUT("/ingresses/:id", s.updateIngress)
 			auth.DELETE("/ingresses/:id", s.deleteIngress)
+			auth.POST("/ingresses/:id/clone", s.cloneIngress)
 
 			// Recorder 流量记录
 			auth.GET("/recorders", s.listRecorders)
@@ -382,6 +386,7 @@ func (s *Server) setupRoutes() {
 			auth.POST("/recorders", s.createRecorder)
 			auth.PUT("/recorders/:id", s.updateRecorder)
 			auth.DELETE("/recorders/:id", s.deleteRecorder)
+			auth.POST("/recorders/:id/clone", s.cloneRecorder)
 
 			// Router 路由管理
 			auth.GET("/routers", s.listRouters)
@@ -389,6 +394,7 @@ func (s *Server) setupRoutes() {
 			auth.POST("/routers", s.createRouter)
 			auth.PUT("/routers/:id", s.updateRouter)
 			auth.DELETE("/routers/:id", s.deleteRouter)
+			auth.POST("/routers/:id/clone", s.cloneRouter)
 
 			// SD 服务发现
 			auth.GET("/sds", s.listSDs)
@@ -396,6 +402,7 @@ func (s *Server) setupRoutes() {
 			auth.POST("/sds", s.createSD)
 			auth.PUT("/sds/:id", s.updateSD)
 			auth.DELETE("/sds/:id", s.deleteSD)
+			auth.POST("/sds/:id/clone", s.cloneSD)
 		}
 	}
 

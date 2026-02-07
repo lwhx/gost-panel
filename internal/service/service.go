@@ -49,6 +49,16 @@ func (s *Service) DB() *gorm.DB {
 	return s.db
 }
 
+// FilterIDsByOwner 过滤 ID 列表，只保留用户有权限的资源
+func (s *Service) FilterIDsByOwner(tableName string, ids []uint, userID uint, isAdmin bool) []uint {
+	if isAdmin {
+		return ids
+	}
+	var filtered []uint
+	s.db.Table(tableName).Where("id IN ? AND (owner_id = ? OR owner_id IS NULL)", ids, userID).Pluck("id", &filtered)
+	return filtered
+}
+
 // Close 关闭服务
 func (s *Service) Close() {
 	if s.healthChecker != nil {
@@ -1211,6 +1221,20 @@ func (s *Service) GetPortForward(id uint) (*model.PortForward, error) {
 	return &forward, nil
 }
 
+// GetPortForwardByOwner 获取端口转发（检查权限）
+func (s *Service) GetPortForwardByOwner(id uint, userID uint, isAdmin bool) (*model.PortForward, error) {
+	var forward model.PortForward
+	query := s.db.Where("id = ?", id)
+	if !isAdmin {
+		query = query.Where("owner_id = ? OR owner_id IS NULL", userID)
+	}
+	err := query.First(&forward).Error
+	if err != nil {
+		return nil, err
+	}
+	return &forward, nil
+}
+
 func (s *Service) CreatePortForward(forward *model.PortForward) error {
 	forward.CreatedAt = time.Now()
 	forward.UpdatedAt = time.Now()
@@ -1243,6 +1267,20 @@ func (s *Service) ListNodeGroups(userID uint, isAdmin bool) ([]model.NodeGroup, 
 func (s *Service) GetNodeGroup(id uint) (*model.NodeGroup, error) {
 	var group model.NodeGroup
 	err := s.db.First(&group, id).Error
+	if err != nil {
+		return nil, err
+	}
+	return &group, nil
+}
+
+// GetNodeGroupByOwner 获取节点组（检查权限）
+func (s *Service) GetNodeGroupByOwner(id uint, userID uint, isAdmin bool) (*model.NodeGroup, error) {
+	var group model.NodeGroup
+	query := s.db.Where("id = ?", id)
+	if !isAdmin {
+		query = query.Where("owner_id = ? OR owner_id IS NULL", userID)
+	}
+	err := query.First(&group).Error
 	if err != nil {
 		return nil, err
 	}
@@ -1367,6 +1405,17 @@ func (s *Service) GetProxyChain(id uint) (*model.ProxyChain, error) {
 	return &chain, err
 }
 
+// GetProxyChainByOwner 获取代理链（检查权限）
+func (s *Service) GetProxyChainByOwner(id uint, userID uint, isAdmin bool) (*model.ProxyChain, error) {
+	var chain model.ProxyChain
+	query := s.db.Where("id = ?", id)
+	if !isAdmin {
+		query = query.Where("owner_id = ? OR owner_id IS NULL", userID)
+	}
+	err := query.First(&chain).Error
+	return &chain, err
+}
+
 // UpdateProxyChain 更新代理链
 func (s *Service) UpdateProxyChain(chain *model.ProxyChain) error {
 	return s.db.Save(chain).Error
@@ -1430,6 +1479,17 @@ func (s *Service) CreateTunnel(tunnel *model.Tunnel) error {
 func (s *Service) GetTunnel(id uint) (*model.Tunnel, error) {
 	var tunnel model.Tunnel
 	err := s.db.Preload("EntryNode").Preload("ExitNode").First(&tunnel, id).Error
+	return &tunnel, err
+}
+
+// GetTunnelByOwner 获取隧道（检查权限）
+func (s *Service) GetTunnelByOwner(id uint, userID uint, isAdmin bool) (*model.Tunnel, error) {
+	var tunnel model.Tunnel
+	query := s.db.Preload("EntryNode").Preload("ExitNode").Where("id = ?", id)
+	if !isAdmin {
+		query = query.Where("owner_id = ? OR owner_id IS NULL", userID)
+	}
+	err := query.First(&tunnel).Error
 	return &tunnel, err
 }
 

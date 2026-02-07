@@ -40,6 +40,16 @@ func getUserInfo(c *gin.Context) (userID uint, isAdmin bool) {
 	return
 }
 
+// parseID 从 URL 参数中解析 ID，失败时返回 400 错误
+func parseID(c *gin.Context) (uint, bool) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "无效的 ID 参数"})
+		return 0, false
+	}
+	return uint(id), true
+}
+
 // getPanelURL 获取 Panel 的完整 URL（支持反向代理）
 func getPanelURL(c *gin.Context) string {
 	// 优先使用 X-Forwarded-Host
@@ -217,6 +227,13 @@ func (s *Server) createNode(c *gin.Context) {
 
 func (s *Server) updateNode(c *gin.Context) {
 	id, _ := strconv.ParseUint(c.Param("id"), 10, 32)
+	userID, isAdmin := getUserInfo(c)
+
+	// 权限检查
+	if _, err := s.svc.GetNodeByOwner(uint(id), userID, isAdmin); err != nil {
+		c.JSON(http.StatusForbidden, gin.H{"error": "无权操作此节点"})
+		return
+	}
 
 	var updates map[string]interface{}
 	if err := c.ShouldBindJSON(&updates); err != nil {
@@ -228,6 +245,7 @@ func (s *Server) updateNode(c *gin.Context) {
 	delete(updates, "id")
 	delete(updates, "agent_token")
 	delete(updates, "created_at")
+	delete(updates, "owner_id")
 
 	if err := s.svc.UpdateNode(uint(id), updates); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -239,6 +257,13 @@ func (s *Server) updateNode(c *gin.Context) {
 
 func (s *Server) deleteNode(c *gin.Context) {
 	id, _ := strconv.ParseUint(c.Param("id"), 10, 32)
+	userID, isAdmin := getUserInfo(c)
+
+	// 权限检查
+	if _, err := s.svc.GetNodeByOwner(uint(id), userID, isAdmin); err != nil {
+		c.JSON(http.StatusForbidden, gin.H{"error": "无权操作此节点"})
+		return
+	}
 
 	if err := s.svc.DeleteNode(uint(id)); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -268,9 +293,12 @@ func (s *Server) batchDeleteNodes(c *gin.Context) {
 		return
 	}
 
+	userID, isAdmin := getUserInfo(c)
+	allowedIDs := s.svc.FilterIDsByOwner("nodes", req.IDs, userID, isAdmin)
+
 	successCount := 0
 	failCount := 0
-	for _, id := range req.IDs {
+	for _, id := range allowedIDs {
 		if err := s.svc.DeleteNode(id); err != nil {
 			failCount++
 		} else {
@@ -298,10 +326,13 @@ func (s *Server) batchSyncNodes(c *gin.Context) {
 		return
 	}
 
+	userID, isAdmin := getUserInfo(c)
+	allowedIDs := s.svc.FilterIDsByOwner("nodes", req.IDs, userID, isAdmin)
+
 	successCount := 0
 	failCount := 0
 	offlineCount := 0
-	for _, id := range req.IDs {
+	for _, id := range allowedIDs {
 		node, err := s.svc.GetNode(id)
 		if err != nil {
 			failCount++
@@ -337,7 +368,10 @@ func (s *Server) batchEnableNodes(c *gin.Context) {
 		return
 	}
 
-	result := s.svc.DB().Model(&model.Node{}).Where("id IN ?", req.IDs).Update("status", "online")
+	userID, isAdmin := getUserInfo(c)
+	allowedIDs := s.svc.FilterIDsByOwner("nodes", req.IDs, userID, isAdmin)
+
+	result := s.svc.DB().Model(&model.Node{}).Where("id IN ?", allowedIDs).Update("status", "online")
 
 	c.JSON(http.StatusOK, gin.H{
 		"success": result.RowsAffected,
@@ -358,7 +392,10 @@ func (s *Server) batchDisableNodes(c *gin.Context) {
 		return
 	}
 
-	result := s.svc.DB().Model(&model.Node{}).Where("id IN ?", req.IDs).Update("status", "offline")
+	userID, isAdmin := getUserInfo(c)
+	allowedIDs := s.svc.FilterIDsByOwner("nodes", req.IDs, userID, isAdmin)
+
+	result := s.svc.DB().Model(&model.Node{}).Where("id IN ?", allowedIDs).Update("status", "offline")
 
 	c.JSON(http.StatusOK, gin.H{
 		"success": result.RowsAffected,
@@ -379,9 +416,12 @@ func (s *Server) batchDeleteClients(c *gin.Context) {
 		return
 	}
 
+	userID, isAdmin := getUserInfo(c)
+	allowedIDs := s.svc.FilterIDsByOwner("clients", req.IDs, userID, isAdmin)
+
 	successCount := 0
 	failCount := 0
-	for _, id := range req.IDs {
+	for _, id := range allowedIDs {
 		if err := s.svc.DeleteClient(id); err != nil {
 			failCount++
 		} else {
@@ -409,7 +449,10 @@ func (s *Server) batchEnableClients(c *gin.Context) {
 		return
 	}
 
-	result := s.svc.DB().Model(&model.Client{}).Where("id IN ?", req.IDs).Update("status", "connected")
+	userID, isAdmin := getUserInfo(c)
+	allowedIDs := s.svc.FilterIDsByOwner("clients", req.IDs, userID, isAdmin)
+
+	result := s.svc.DB().Model(&model.Client{}).Where("id IN ?", allowedIDs).Update("status", "connected")
 
 	c.JSON(http.StatusOK, gin.H{
 		"success": result.RowsAffected,
@@ -430,7 +473,10 @@ func (s *Server) batchDisableClients(c *gin.Context) {
 		return
 	}
 
-	result := s.svc.DB().Model(&model.Client{}).Where("id IN ?", req.IDs).Update("status", "disconnected")
+	userID, isAdmin := getUserInfo(c)
+	allowedIDs := s.svc.FilterIDsByOwner("clients", req.IDs, userID, isAdmin)
+
+	result := s.svc.DB().Model(&model.Client{}).Where("id IN ?", allowedIDs).Update("status", "disconnected")
 
 	c.JSON(http.StatusOK, gin.H{
 		"success": result.RowsAffected,
@@ -451,10 +497,13 @@ func (s *Server) batchSyncClients(c *gin.Context) {
 		return
 	}
 
+	userID, isAdmin := getUserInfo(c)
+	allowedIDs := s.svc.FilterIDsByOwner("clients", req.IDs, userID, isAdmin)
+
 	successCount := 0
 	failCount := 0
 	offlineCount := 0
-	for _, id := range req.IDs {
+	for _, id := range allowedIDs {
 		client, err := s.svc.GetClient(id)
 		if err != nil {
 			failCount++
@@ -980,6 +1029,13 @@ func (s *Server) createClient(c *gin.Context) {
 
 func (s *Server) updateClient(c *gin.Context) {
 	id, _ := strconv.ParseUint(c.Param("id"), 10, 32)
+	userID, isAdmin := getUserInfo(c)
+
+	// 权限检查
+	if _, err := s.svc.GetClientByOwner(uint(id), userID, isAdmin); err != nil {
+		c.JSON(http.StatusForbidden, gin.H{"error": "无权操作此客户端"})
+		return
+	}
 
 	var updates map[string]interface{}
 	if err := c.ShouldBindJSON(&updates); err != nil {
@@ -990,6 +1046,7 @@ func (s *Server) updateClient(c *gin.Context) {
 	delete(updates, "id")
 	delete(updates, "token")
 	delete(updates, "created_at")
+	delete(updates, "owner_id")
 
 	if err := s.svc.UpdateClient(uint(id), updates); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -1001,6 +1058,13 @@ func (s *Server) updateClient(c *gin.Context) {
 
 func (s *Server) deleteClient(c *gin.Context) {
 	id, _ := strconv.ParseUint(c.Param("id"), 10, 32)
+	userID, isAdmin := getUserInfo(c)
+
+	// 权限检查
+	if _, err := s.svc.GetClientByOwner(uint(id), userID, isAdmin); err != nil {
+		c.JSON(http.StatusForbidden, gin.H{"error": "无权操作此客户端"})
+		return
+	}
 
 	if err := s.svc.DeleteClient(uint(id)); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -1087,6 +1151,10 @@ func (s *Server) getClientProxyURI(c *gin.Context) {
 
 	// 生成通过节点访问的代理 URI
 	// 格式: socks5://user:pass@节点地址:远程端口
+	if client.Node == nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "客户端未关联节点"})
+		return
+	}
 	node := client.Node
 	uri := fmt.Sprintf("socks5://%s:%s@%s:%d",
 		client.ProxyUser, client.ProxyPass, node.Host, client.RemotePort)
@@ -2362,6 +2430,13 @@ func (s *Server) createPortForward(c *gin.Context) {
 
 func (s *Server) updatePortForward(c *gin.Context) {
 	id, _ := strconv.ParseUint(c.Param("id"), 10, 32)
+	userID, isAdmin := getUserInfo(c)
+
+	// 权限检查
+	if _, err := s.svc.GetPortForwardByOwner(uint(id), userID, isAdmin); err != nil {
+		c.JSON(http.StatusForbidden, gin.H{"error": "无权操作此转发规则"})
+		return
+	}
 
 	var updates map[string]interface{}
 	if err := c.ShouldBindJSON(&updates); err != nil {
@@ -2416,6 +2491,13 @@ func (s *Server) updatePortForward(c *gin.Context) {
 
 func (s *Server) deletePortForward(c *gin.Context) {
 	id, _ := strconv.ParseUint(c.Param("id"), 10, 32)
+	userID, isAdmin := getUserInfo(c)
+
+	// 权限检查
+	if _, err := s.svc.GetPortForwardByOwner(uint(id), userID, isAdmin); err != nil {
+		c.JSON(http.StatusForbidden, gin.H{"error": "无权操作此转发规则"})
+		return
+	}
 
 	if err := s.svc.DeletePortForward(uint(id)); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -2528,6 +2610,13 @@ func (s *Server) createNodeGroup(c *gin.Context) {
 
 func (s *Server) updateNodeGroup(c *gin.Context) {
 	id, _ := strconv.ParseUint(c.Param("id"), 10, 32)
+	userID, isAdmin := getUserInfo(c)
+
+	// 权限检查
+	if _, err := s.svc.GetNodeGroupByOwner(uint(id), userID, isAdmin); err != nil {
+		c.JSON(http.StatusForbidden, gin.H{"error": "无权操作此节点组"})
+		return
+	}
 
 	var updates map[string]interface{}
 	if err := c.ShouldBindJSON(&updates); err != nil {
@@ -2568,6 +2657,13 @@ func (s *Server) updateNodeGroup(c *gin.Context) {
 
 func (s *Server) deleteNodeGroup(c *gin.Context) {
 	id, _ := strconv.ParseUint(c.Param("id"), 10, 32)
+	userID, isAdmin := getUserInfo(c)
+
+	// 权限检查
+	if _, err := s.svc.GetNodeGroupByOwner(uint(id), userID, isAdmin); err != nil {
+		c.JSON(http.StatusForbidden, gin.H{"error": "无权操作此节点组"})
+		return
+	}
 
 	if err := s.svc.DeleteNodeGroup(uint(id)); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -3268,9 +3364,11 @@ func (s *Server) createProxyChain(c *gin.Context) {
 
 func (s *Server) updateProxyChain(c *gin.Context) {
 	id, _ := strconv.ParseUint(c.Param("id"), 10, 32)
-	chain, err := s.svc.GetProxyChain(uint(id))
+	userID, isAdmin := getUserInfo(c)
+
+	chain, err := s.svc.GetProxyChainByOwner(uint(id), userID, isAdmin)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "proxy chain not found"})
+		c.JSON(http.StatusForbidden, gin.H{"error": "无权操作此代理链"})
 		return
 	}
 
@@ -3289,11 +3387,19 @@ func (s *Server) updateProxyChain(c *gin.Context) {
 
 func (s *Server) deleteProxyChain(c *gin.Context) {
 	id, _ := strconv.ParseUint(c.Param("id"), 10, 32)
+	userID, isAdmin := getUserInfo(c)
+
+	// 权限检查
+	if _, err := s.svc.GetProxyChainByOwner(uint(id), userID, isAdmin); err != nil {
+		c.JSON(http.StatusForbidden, gin.H{"error": "无权操作此代理链"})
+		return
+	}
+
 	if err := s.svc.DeleteProxyChain(uint(id)); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"message": "deleted"})
+	c.JSON(http.StatusOK, gin.H{"success": true})
 }
 
 func (s *Server) listProxyChainHops(c *gin.Context) {
@@ -3353,7 +3459,7 @@ func (s *Server) removeProxyChainHop(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"message": "deleted"})
+	c.JSON(http.StatusOK, gin.H{"success": true})
 }
 
 func (s *Server) getProxyChainConfig(c *gin.Context) {
@@ -3452,9 +3558,11 @@ func (s *Server) createTunnel(c *gin.Context) {
 
 func (s *Server) updateTunnel(c *gin.Context) {
 	id, _ := strconv.ParseUint(c.Param("id"), 10, 32)
-	tunnel, err := s.svc.GetTunnel(uint(id))
+	userID, isAdmin := getUserInfo(c)
+
+	tunnel, err := s.svc.GetTunnelByOwner(uint(id), userID, isAdmin)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "tunnel not found"})
+		c.JSON(http.StatusForbidden, gin.H{"error": "无权操作此隧道"})
 		return
 	}
 
@@ -3475,11 +3583,19 @@ func (s *Server) updateTunnel(c *gin.Context) {
 
 func (s *Server) deleteTunnel(c *gin.Context) {
 	id, _ := strconv.ParseUint(c.Param("id"), 10, 32)
+	userID, isAdmin := getUserInfo(c)
+
+	// 权限检查
+	if _, err := s.svc.GetTunnelByOwner(uint(id), userID, isAdmin); err != nil {
+		c.JSON(http.StatusForbidden, gin.H{"error": "无权操作此隧道"})
+		return
+	}
+
 	if err := s.svc.DeleteTunnel(uint(id)); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"message": "deleted"})
+	c.JSON(http.StatusOK, gin.H{"success": true})
 }
 
 func (s *Server) syncTunnel(c *gin.Context) {
@@ -4533,6 +4649,194 @@ func (s *Server) deleteSD(c *gin.Context) {
 	}
 	s.audit.LogSuccess(c, "delete", "sd", uint(id), "")
 	c.JSON(http.StatusOK, gin.H{"success": true})
+}
+
+// ==================== Clone Handlers for Rules ====================
+
+func (s *Server) cloneBypass(c *gin.Context) {
+	id, _ := strconv.ParseUint(c.Param("id"), 10, 32)
+	userID, _ := getUserInfo(c)
+
+	bypass, err := s.svc.GetBypass(uint(id))
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "bypass not found"})
+		return
+	}
+
+	cloned := &model.Bypass{
+		Name:      bypass.Name + " (副本)",
+		Whitelist: bypass.Whitelist,
+		Matchers:  bypass.Matchers,
+		NodeID:    bypass.NodeID,
+		OwnerID:   &userID,
+	}
+
+	if err := s.svc.CreateBypass(cloned); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	s.audit.LogSuccess(c, "clone", "bypass", cloned.ID, fmt.Sprintf("from #%d", bypass.ID))
+	c.JSON(http.StatusOK, cloned)
+}
+
+func (s *Server) cloneAdmission(c *gin.Context) {
+	id, _ := strconv.ParseUint(c.Param("id"), 10, 32)
+	userID, _ := getUserInfo(c)
+
+	admission, err := s.svc.GetAdmission(uint(id))
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "admission not found"})
+		return
+	}
+
+	cloned := &model.Admission{
+		Name:      admission.Name + " (副本)",
+		Whitelist: admission.Whitelist,
+		Matchers:  admission.Matchers,
+		NodeID:    admission.NodeID,
+		OwnerID:   &userID,
+	}
+
+	if err := s.svc.CreateAdmission(cloned); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	s.audit.LogSuccess(c, "clone", "admission", cloned.ID, fmt.Sprintf("from #%d", admission.ID))
+	c.JSON(http.StatusOK, cloned)
+}
+
+func (s *Server) cloneHostMapping(c *gin.Context) {
+	id, _ := strconv.ParseUint(c.Param("id"), 10, 32)
+	userID, _ := getUserInfo(c)
+
+	mapping, err := s.svc.GetHostMapping(uint(id))
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "host mapping not found"})
+		return
+	}
+
+	cloned := &model.HostMapping{
+		Name:     mapping.Name + " (副本)",
+		Mappings: mapping.Mappings,
+		NodeID:   mapping.NodeID,
+		OwnerID:  &userID,
+	}
+
+	if err := s.svc.CreateHostMapping(cloned); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	s.audit.LogSuccess(c, "clone", "host_mapping", cloned.ID, fmt.Sprintf("from #%d", mapping.ID))
+	c.JSON(http.StatusOK, cloned)
+}
+
+func (s *Server) cloneIngress(c *gin.Context) {
+	id, _ := strconv.ParseUint(c.Param("id"), 10, 32)
+	userID, _ := getUserInfo(c)
+
+	ingress, err := s.svc.GetIngress(uint(id))
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "ingress not found"})
+		return
+	}
+
+	cloned := &model.Ingress{
+		Name:    ingress.Name + " (副本)",
+		Rules:   ingress.Rules,
+		NodeID:  ingress.NodeID,
+		OwnerID: &userID,
+	}
+
+	if err := s.svc.CreateIngress(cloned); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	s.audit.LogSuccess(c, "clone", "ingress", cloned.ID, fmt.Sprintf("from #%d", ingress.ID))
+	c.JSON(http.StatusOK, cloned)
+}
+
+func (s *Server) cloneRecorder(c *gin.Context) {
+	id, _ := strconv.ParseUint(c.Param("id"), 10, 32)
+	userID, _ := getUserInfo(c)
+
+	recorder, err := s.svc.GetRecorder(uint(id))
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "recorder not found"})
+		return
+	}
+
+	cloned := &model.Recorder{
+		Name:    recorder.Name + " (副本)",
+		Type:    recorder.Type,
+		Config:  recorder.Config,
+		NodeID:  recorder.NodeID,
+		OwnerID: &userID,
+	}
+
+	if err := s.svc.CreateRecorder(cloned); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	s.audit.LogSuccess(c, "clone", "recorder", cloned.ID, fmt.Sprintf("from #%d", recorder.ID))
+	c.JSON(http.StatusOK, cloned)
+}
+
+func (s *Server) cloneRouter(c *gin.Context) {
+	id, _ := strconv.ParseUint(c.Param("id"), 10, 32)
+	userID, _ := getUserInfo(c)
+
+	router, err := s.svc.GetRouter(uint(id))
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "router not found"})
+		return
+	}
+
+	cloned := &model.Router{
+		Name:    router.Name + " (副本)",
+		Routes:  router.Routes,
+		NodeID:  router.NodeID,
+		OwnerID: &userID,
+	}
+
+	if err := s.svc.CreateRouter(cloned); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	s.audit.LogSuccess(c, "clone", "router", cloned.ID, fmt.Sprintf("from #%d", router.ID))
+	c.JSON(http.StatusOK, cloned)
+}
+
+func (s *Server) cloneSD(c *gin.Context) {
+	id, _ := strconv.ParseUint(c.Param("id"), 10, 32)
+	userID, _ := getUserInfo(c)
+
+	sd, err := s.svc.GetSD(uint(id))
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "sd not found"})
+		return
+	}
+
+	cloned := &model.SD{
+		Name:    sd.Name + " (副本)",
+		Type:    sd.Type,
+		Config:  sd.Config,
+		NodeID:  sd.NodeID,
+		OwnerID: &userID,
+	}
+
+	if err := s.svc.CreateSD(cloned); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	s.audit.LogSuccess(c, "clone", "sd", cloned.ID, fmt.Sprintf("from #%d", sd.ID))
+	c.JSON(http.StatusOK, cloned)
 }
 
 // ==================== ConfigVersion 配置版本历史 ====================

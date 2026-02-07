@@ -368,6 +368,13 @@ export const clonePortForward = (id: number) => api.post(`/port-forwards/${id}/c
 export const cloneTunnel = (id: number) => api.post(`/tunnels/${id}/clone`)
 export const cloneProxyChain = (id: number) => api.post(`/proxy-chains/${id}/clone`)
 export const cloneNodeGroup = (id: number) => api.post(`/node-groups/${id}/clone`)
+export const cloneBypass = (id: number) => api.post(`/bypasses/${id}/clone`)
+export const cloneAdmission = (id: number) => api.post(`/admissions/${id}/clone`)
+export const cloneHostMapping = (id: number) => api.post(`/host-mappings/${id}/clone`)
+export const cloneIngress = (id: number) => api.post(`/ingresses/${id}/clone`)
+export const cloneRecorder = (id: number) => api.post(`/recorders/${id}/clone`)
+export const cloneRouter = (id: number) => api.post(`/routers/${id}/clone`)
+export const cloneSD = (id: number) => api.post(`/sds/${id}/clone`)
 
 // 配置版本历史
 export const getConfigVersions = (nodeId: number) => api.get(`/nodes/${nodeId}/config-versions`)

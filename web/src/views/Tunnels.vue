@@ -4,9 +4,21 @@
       <template #header>
         <n-space justify="space-between" align="center">
           <span>隧道转发</span>
-          <n-button type="primary" @click="openCreateModal">
-            添加隧道
-          </n-button>
+          <n-space>
+            <n-input
+              v-model:value="searchText"
+              placeholder="搜索隧道名称、描述、目标地址..."
+              clearable
+              style="width: 280px;"
+            >
+              <template #prefix>
+                <span>🔍</span>
+              </template>
+            </n-input>
+            <n-button type="primary" @click="openCreateModal">
+              添加隧道
+            </n-button>
+          </n-space>
         </n-space>
       </template>
 
@@ -25,11 +37,18 @@
         @action="openCreateModal"
       />
 
+      <!-- 搜索无结果 -->
+      <EmptyState
+        v-else-if="searchText && filteredTunnels.length === 0"
+        type="search"
+        :description="`未找到包含 '${searchText}' 的隧道`"
+      />
+
       <!-- 数据表格 -->
       <n-data-table
         v-else
         :columns="columns"
-        :data="tunnels"
+        :data="filteredTunnels"
         :loading="loading"
         :row-key="(row: any) => row.id"
       />
@@ -150,6 +169,7 @@ const dialog = useDialog()
 const loading = ref(false)
 const saving = ref(false)
 const tunnels = ref<any[]>([])
+const searchText = ref('')
 const allNodes = ref<any[]>([])
 const showCreateModal = ref(false)
 const showConfigModal = ref(false)
@@ -157,6 +177,17 @@ const entryConfig = ref('')
 const exitConfig = ref('')
 const editingTunnel = ref<any>(null)
 const currentTunnel = ref<any>(null)
+
+// 搜索过滤
+const filteredTunnels = computed(() => {
+  if (!searchText.value) return tunnels.value
+  const search = searchText.value.toLowerCase()
+  return tunnels.value.filter((tunnel: any) =>
+    tunnel.name?.toLowerCase().includes(search) ||
+    tunnel.description?.toLowerCase().includes(search) ||
+    tunnel.target_addr?.toLowerCase().includes(search)
+  )
+})
 
 const protocolOptions = [
   { label: 'TCP+UDP (端口复用)', value: 'tcp+udp' },

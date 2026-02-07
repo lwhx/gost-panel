@@ -4,9 +4,21 @@
       <template #header>
         <n-space justify="space-between" align="center">
           <span>隧道转发 / 代理链</span>
-          <n-button type="primary" @click="openCreateModal">
-            添加隧道
-          </n-button>
+          <n-space>
+            <n-input
+              v-model:value="searchText"
+              placeholder="搜索隧道名称、描述、监听地址..."
+              clearable
+              style="width: 280px;"
+            >
+              <template #prefix>
+                <span>🔍</span>
+              </template>
+            </n-input>
+            <n-button type="primary" @click="openCreateModal">
+              添加隧道
+            </n-button>
+          </n-space>
         </n-space>
       </template>
 
@@ -25,10 +37,17 @@
         @action="openCreateModal"
       />
 
+      <!-- 搜索无结果 -->
+      <EmptyState
+        v-else-if="searchText && filteredProxyChains.length === 0"
+        type="search"
+        :description="`未找到包含 '${searchText}' 的隧道`"
+      />
+
       <n-data-table
         v-else
         :columns="columns"
-        :data="proxyChains"
+        :data="filteredProxyChains"
         :loading="loading"
         :row-key="(row: any) => row.id"
       />
@@ -139,6 +158,7 @@ const saving = ref(false)
 const hopsLoading = ref(false)
 const addingHop = ref(false)
 const proxyChains = ref<any[]>([])
+const searchText = ref('')
 const hops = ref<any[]>([])
 const allNodes = ref<any[]>([])
 const showCreateModal = ref(false)
@@ -148,6 +168,17 @@ const showConfigModal = ref(false)
 const configContent = ref('')
 const editingChain = ref<any>(null)
 const currentChain = ref<any>(null)
+
+// 搜索过滤
+const filteredProxyChains = computed(() => {
+  if (!searchText.value) return proxyChains.value
+  const search = searchText.value.toLowerCase()
+  return proxyChains.value.filter((chain: any) =>
+    chain.name?.toLowerCase().includes(search) ||
+    chain.description?.toLowerCase().includes(search) ||
+    chain.listen_addr?.toLowerCase().includes(search)
+  )
+})
 
 const listenTypeOptions = [
   { label: 'SOCKS5 代理', value: 'socks5' },

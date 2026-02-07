@@ -4,9 +4,12 @@
       <template #header>
         <n-space justify="space-between" align="center">
           <span>端口转发</span>
-          <n-button type="primary" @click="openCreateModal">
-            添加转发规则
-          </n-button>
+          <n-space>
+            <n-input v-model:value="searchText" placeholder="搜索..." clearable style="width: 200px" />
+            <n-button type="primary" @click="openCreateModal">
+              添加转发规则
+            </n-button>
+          </n-space>
         </n-space>
       </template>
 
@@ -15,17 +18,24 @@
 
       <!-- 空状态 -->
       <EmptyState
-        v-else-if="!loading && portForwards.length === 0"
+        v-else-if="!loading && portForwards.length === 0 && !searchText"
         type="forwards"
         action-text="添加转发规则"
         @action="openCreateModal"
+      />
+
+      <!-- 搜索无结果 -->
+      <EmptyState
+        v-else-if="!loading && filteredPortForwards.length === 0 && searchText"
+        type="search"
+        :description="`未找到与 '${searchText}' 匹配的转发规则`"
       />
 
       <!-- 数据表格 -->
       <n-data-table
         v-else
         :columns="columns"
-        :data="portForwards"
+        :data="filteredPortForwards"
         :loading="loading"
         :row-key="(row: any) => row.id"
       />
@@ -89,7 +99,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, h, onMounted } from 'vue'
+import { ref, h, onMounted, computed } from 'vue'
 import { NButton, NSpace, NTag, NDropdown, NAlert, useMessage, useDialog } from 'naive-ui'
 import { getPortForwards, createPortForward, updatePortForward, deletePortForward, clonePortForward, getNodes, getProxyChains } from '../api'
 import EmptyState from '../components/EmptyState.vue'
@@ -105,6 +115,20 @@ const portForwards = ref<any[]>([])
 const nodes = ref<any[]>([])
 const showCreateModal = ref(false)
 const editingForward = ref<any>(null)
+const searchText = ref('')
+
+const filteredPortForwards = computed(() => {
+  if (!searchText.value) return portForwards.value
+  const s = searchText.value.toLowerCase()
+  return portForwards.value.filter((pf: any) =>
+    pf.name?.toLowerCase().includes(s) ||
+    pf.listen_host?.includes(s) ||
+    pf.target_host?.includes(s) ||
+    pf.node_name?.toLowerCase().includes(s) ||
+    String(pf.listen_port).includes(s) ||
+    String(pf.target_port).includes(s)
+  )
+})
 
 const protocolOptions = [
   { label: 'TCP 本地转发', value: 'tcp' },

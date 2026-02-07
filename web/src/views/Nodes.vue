@@ -903,17 +903,31 @@ const openCreateModal = () => {
 const handleEdit = (row: any) => {
   editingNode.value = row
   form.value = { ...defaultForm(), ...row }
+  // 从 transport_opts 恢复 KCP 参数
+  if (row.transport === 'kcp' && row.transport_opts) {
+    try {
+      const opts = typeof row.transport_opts === 'string' ? JSON.parse(row.transport_opts) : row.transport_opts
+      kcpParams.value = { ...kcpParams.value, ...opts }
+    } catch { /* ignore parse errors */ }
+  } else {
+    kcpParams.value = { mtu: 1350, sndwnd: 1024, rcvwnd: 1024, datashard: 10, parityshard: 3 }
+  }
   showCreateModal.value = true
 }
 
 const handleSave = async () => {
   saving.value = true
   try {
+    const payload: any = { ...form.value }
+    // KCP 参数序列化到 transport_opts
+    if (payload.transport === 'kcp') {
+      payload.transport_opts = JSON.stringify(kcpParams.value)
+    }
     if (editingNode.value) {
-      await updateNode(editingNode.value.id, form.value)
+      await updateNode(editingNode.value.id, payload)
       message.success('节点已更新')
     } else {
-      await createNode(form.value)
+      await createNode(payload)
       message.success('节点已创建')
     }
     showCreateModal.value = false

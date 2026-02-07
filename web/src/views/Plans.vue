@@ -4,9 +4,21 @@
       <template #header>
         <n-space justify="space-between" align="center">
           <span>套餐管理</span>
-          <n-button type="primary" @click="openCreateModal">
-            添加套餐
-          </n-button>
+          <n-space>
+            <n-input
+              v-model:value="searchText"
+              placeholder="搜索套餐名称、描述..."
+              clearable
+              style="width: 250px;"
+            >
+              <template #prefix>
+                <span>🔍</span>
+              </template>
+            </n-input>
+            <n-button type="primary" @click="openCreateModal">
+              添加套餐
+            </n-button>
+          </n-space>
         </n-space>
       </template>
 
@@ -21,11 +33,18 @@
         @action="openCreateModal"
       />
 
+      <!-- 搜索无结果 -->
+      <EmptyState
+        v-else-if="searchText && filteredPlans.length === 0"
+        type="search"
+        :description="`未找到包含 '${searchText}' 的套餐`"
+      />
+
       <!-- 数据表格 -->
       <n-data-table
         v-else
         :columns="columns"
-        :data="plans"
+        :data="filteredPlans"
         :loading="loading"
         :row-key="(row: any) => row.id"
       />
@@ -252,6 +271,7 @@ const dialog = useDialog()
 const loading = ref(false)
 const saving = ref(false)
 const plans = ref<any[]>([])
+const searchText = ref('')
 const showCreateModal = ref(false)
 const editingPlan = ref<any>(null)
 
@@ -267,6 +287,16 @@ const planResources = ref<Record<string, number[]>>({
   port_forward: [],
   proxy_chain: [],
   node_group: [],
+})
+
+// 搜索过滤
+const filteredPlans = computed(() => {
+  if (!searchText.value) return plans.value
+  const search = searchText.value.toLowerCase()
+  return plans.value.filter((plan: any) =>
+    plan.name?.toLowerCase().includes(search) ||
+    plan.description?.toLowerCase().includes(search)
+  )
 })
 
 const defaultForm = () => ({

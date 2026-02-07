@@ -269,13 +269,13 @@
 import { ref, h, onMounted, computed } from 'vue'
 import { NButton, NSpace, NTag, useMessage, useDialog } from 'naive-ui'
 import {
-  getBypasses, createBypass, updateBypass, deleteBypass,
-  getAdmissions, createAdmission, updateAdmission, deleteAdmission,
-  getHostMappings, createHostMapping, updateHostMapping, deleteHostMapping,
-  getIngresses, createIngress, updateIngress, deleteIngress,
-  getRecorders, createRecorder, updateRecorder, deleteRecorder,
-  getRouters, createRouter, updateRouter, deleteRouter,
-  getSDs, createSD, updateSD, deleteSD,
+  getBypasses, createBypass, updateBypass, deleteBypass, cloneBypass,
+  getAdmissions, createAdmission, updateAdmission, deleteAdmission, cloneAdmission,
+  getHostMappings, createHostMapping, updateHostMapping, deleteHostMapping, cloneHostMapping,
+  getIngresses, createIngress, updateIngress, deleteIngress, cloneIngress,
+  getRecorders, createRecorder, updateRecorder, deleteRecorder, cloneRecorder,
+  getRouters, createRouter, updateRouter, deleteRouter, cloneRouter,
+  getSDs, createSD, updateSD, deleteSD, cloneSD,
   getNodes,
 } from '../api'
 import EmptyState from '../components/EmptyState.vue'
@@ -485,6 +485,7 @@ const bypassColumns = [
     title: '操作', key: 'actions', width: 150,
     render: (row: any) => h(NSpace, { size: 'small' }, () => [
       h(NButton, { size: 'small', onClick: () => openBypassModal(row) }, () => '编辑'),
+      h(NButton, { size: 'small', onClick: () => handleCloneBypass(row) }, () => '克隆'),
       h(NButton, { size: 'small', type: 'error', onClick: () => handleDeleteBypass(row) }, () => '删除'),
     ]),
   },
@@ -546,6 +547,16 @@ const handleDeleteBypass = (row: any) => {
   })
 }
 
+const handleCloneBypass = async (row: any) => {
+  try {
+    await cloneBypass(row.id)
+    message.success('克隆成功')
+    loadBypasses()
+  } catch (e: any) {
+    message.error(e.response?.data?.error || '克隆失败')
+  }
+}
+
 // ==================== Admission ====================
 const admissionColumns = [
   { title: 'ID', key: 'id', width: 60 },
@@ -570,6 +581,7 @@ const admissionColumns = [
     title: '操作', key: 'actions', width: 150,
     render: (row: any) => h(NSpace, { size: 'small' }, () => [
       h(NButton, { size: 'small', onClick: () => openAdmissionModal(row) }, () => '编辑'),
+      h(NButton, { size: 'small', onClick: () => handleCloneAdmission(row) }, () => '克隆'),
       h(NButton, { size: 'small', type: 'error', onClick: () => handleDeleteAdmission(row) }, () => '删除'),
     ]),
   },
@@ -631,6 +643,16 @@ const handleDeleteAdmission = (row: any) => {
   })
 }
 
+const handleCloneAdmission = async (row: any) => {
+  try {
+    await cloneAdmission(row.id)
+    message.success('克隆成功')
+    loadAdmissions()
+  } catch (e: any) {
+    message.error(e.response?.data?.error || '克隆失败')
+  }
+}
+
 // ==================== HostMapping ====================
 const hostsColumns = [
   { title: 'ID', key: 'id', width: 60 },
@@ -651,6 +673,7 @@ const hostsColumns = [
     title: '操作', key: 'actions', width: 150,
     render: (row: any) => h(NSpace, { size: 'small' }, () => [
       h(NButton, { size: 'small', onClick: () => openHostsModal(row) }, () => '编辑'),
+      h(NButton, { size: 'small', onClick: () => handleCloneHostMapping(row) }, () => '克隆'),
       h(NButton, { size: 'small', type: 'error', onClick: () => handleDeleteHosts(row) }, () => '删除'),
     ]),
   },
@@ -711,6 +734,16 @@ const handleDeleteHosts = (row: any) => {
   })
 }
 
+const handleCloneHostMapping = async (row: any) => {
+  try {
+    await cloneHostMapping(row.id)
+    message.success('克隆成功')
+    loadHostMappings()
+  } catch (e: any) {
+    message.error(e.response?.data?.error || '克隆失败')
+  }
+}
+
 // ==================== Ingress ====================
 const ingressColumns = [
   { title: 'ID', key: 'id', width: 60 },
@@ -731,6 +764,7 @@ const ingressColumns = [
     title: '操作', key: 'actions', width: 150,
     render: (row: any) => h(NSpace, { size: 'small' }, () => [
       h(NButton, { size: 'small', onClick: () => openIngressModal(row) }, () => '编辑'),
+      h(NButton, { size: 'small', onClick: () => handleCloneIngress(row) }, () => '克隆'),
       h(NButton, { size: 'small', type: 'error', onClick: () => handleDeleteIngress(row) }, () => '删除'),
     ]),
   },
@@ -791,6 +825,16 @@ const handleDeleteIngress = (row: any) => {
   })
 }
 
+const handleCloneIngress = async (row: any) => {
+  try {
+    await cloneIngress(row.id)
+    message.success('克隆成功')
+    loadIngresses()
+  } catch (e: any) {
+    message.error(e.response?.data?.error || '克隆失败')
+  }
+}
+
 // ==================== Recorder ====================
 const recorderColumns = [
   { title: 'ID', key: 'id', width: 60 },
@@ -814,6 +858,7 @@ const recorderColumns = [
     title: '操作', key: 'actions', width: 150,
     render: (row: any) => h(NSpace, { size: 'small' }, () => [
       h(NButton, { size: 'small', onClick: () => openRecorderModal(row) }, () => '编辑'),
+      h(NButton, { size: 'small', onClick: () => handleCloneRecorder(row) }, () => '克隆'),
       h(NButton, { size: 'small', type: 'error', onClick: () => handleDeleteRecorder(row) }, () => '删除'),
     ]),
   },
@@ -875,6 +920,16 @@ const handleDeleteRecorder = (row: any) => {
   })
 }
 
+const handleCloneRecorder = async (row: any) => {
+  try {
+    await cloneRecorder(row.id)
+    message.success('克隆成功')
+    loadRecorders()
+  } catch (e: any) {
+    message.error(e.response?.data?.error || '克隆失败')
+  }
+}
+
 // ==================== Router ====================
 const routerColumns = [
   { title: 'ID', key: 'id', width: 60 },
@@ -895,6 +950,7 @@ const routerColumns = [
     title: '操作', key: 'actions', width: 150,
     render: (row: any) => h(NSpace, { size: 'small' }, () => [
       h(NButton, { size: 'small', onClick: () => openRouterModal(row) }, () => '编辑'),
+      h(NButton, { size: 'small', onClick: () => handleCloneRouter(row) }, () => '克隆'),
       h(NButton, { size: 'small', type: 'error', onClick: () => handleDeleteRouter(row) }, () => '删除'),
     ]),
   },
@@ -955,6 +1011,16 @@ const handleDeleteRouter = (row: any) => {
   })
 }
 
+const handleCloneRouter = async (row: any) => {
+  try {
+    await cloneRouter(row.id)
+    message.success('克隆成功')
+    loadRouters()
+  } catch (e: any) {
+    message.error(e.response?.data?.error || '克隆失败')
+  }
+}
+
 // ==================== SD ====================
 const sdColumns = [
   { title: 'ID', key: 'id', width: 60 },
@@ -978,6 +1044,7 @@ const sdColumns = [
     title: '操作', key: 'actions', width: 150,
     render: (row: any) => h(NSpace, { size: 'small' }, () => [
       h(NButton, { size: 'small', onClick: () => openSDModal(row) }, () => '编辑'),
+      h(NButton, { size: 'small', onClick: () => handleCloneSD(row) }, () => '克隆'),
       h(NButton, { size: 'small', type: 'error', onClick: () => handleDeleteSD(row) }, () => '删除'),
     ]),
   },
@@ -1037,6 +1104,16 @@ const handleDeleteSD = (row: any) => {
       catch { message.error('删除失败') }
     },
   })
+}
+
+const handleCloneSD = async (row: any) => {
+  try {
+    await cloneSD(row.id)
+    message.success('克隆成功')
+    loadSDs()
+  } catch (e: any) {
+    message.error(e.response?.data?.error || '克隆失败')
+  }
 }
 
 // Load all nodes for selector
