@@ -44,6 +44,11 @@ func (s *Service) GetAlertService() *notify.AlertService {
 	return s.alertService
 }
 
+// DB 返回数据库实例
+func (s *Service) DB() *gorm.DB {
+	return s.db
+}
+
 // Close 关闭服务
 func (s *Service) Close() {
 	if s.healthChecker != nil {

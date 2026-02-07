@@ -13,6 +13,7 @@ export interface User extends BaseEntity {
   enabled: boolean
   password_changed: boolean
   email_verified: boolean
+  two_factor_enabled?: boolean
   last_login_at?: string
   last_login_ip?: string
   // 套餐
