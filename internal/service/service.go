@@ -1972,6 +1972,19 @@ func (s *Service) GetBypass(id uint) (*model.Bypass, error) {
 	return &bypass, nil
 }
 
+func (s *Service) GetBypassByOwner(id uint, userID uint, isAdmin bool) (*model.Bypass, error) {
+	var bypass model.Bypass
+	query := s.db.Where("id = ?", id)
+	if !isAdmin {
+		query = query.Where("owner_id = ? OR owner_id IS NULL", userID)
+	}
+	err := query.First(&bypass).Error
+	if err != nil {
+		return nil, err
+	}
+	return &bypass, nil
+}
+
 func (s *Service) CreateBypass(bypass *model.Bypass) error {
 	bypass.CreatedAt = time.Now()
 	bypass.UpdatedAt = time.Now()
@@ -1982,6 +1995,7 @@ func (s *Service) UpdateBypass(id uint, updates map[string]interface{}) error {
 	updates["updated_at"] = time.Now()
 	delete(updates, "id")
 	delete(updates, "created_at")
+	delete(updates, "owner_id")
 	return s.db.Model(&model.Bypass{}).Where("id = ?", id).Updates(updates).Error
 }
 
@@ -2015,6 +2029,19 @@ func (s *Service) GetAdmission(id uint) (*model.Admission, error) {
 	return &admission, nil
 }
 
+func (s *Service) GetAdmissionByOwner(id uint, userID uint, isAdmin bool) (*model.Admission, error) {
+	var admission model.Admission
+	query := s.db.Where("id = ?", id)
+	if !isAdmin {
+		query = query.Where("owner_id = ? OR owner_id IS NULL", userID)
+	}
+	err := query.First(&admission).Error
+	if err != nil {
+		return nil, err
+	}
+	return &admission, nil
+}
+
 func (s *Service) CreateAdmission(admission *model.Admission) error {
 	admission.CreatedAt = time.Now()
 	admission.UpdatedAt = time.Now()
@@ -2025,6 +2052,7 @@ func (s *Service) UpdateAdmission(id uint, updates map[string]interface{}) error
 	updates["updated_at"] = time.Now()
 	delete(updates, "id")
 	delete(updates, "created_at")
+	delete(updates, "owner_id")
 	return s.db.Model(&model.Admission{}).Where("id = ?", id).Updates(updates).Error
 }
 
@@ -2058,6 +2086,19 @@ func (s *Service) GetHostMapping(id uint) (*model.HostMapping, error) {
 	return &mapping, nil
 }
 
+func (s *Service) GetHostMappingByOwner(id uint, userID uint, isAdmin bool) (*model.HostMapping, error) {
+	var mapping model.HostMapping
+	query := s.db.Where("id = ?", id)
+	if !isAdmin {
+		query = query.Where("owner_id = ? OR owner_id IS NULL", userID)
+	}
+	err := query.First(&mapping).Error
+	if err != nil {
+		return nil, err
+	}
+	return &mapping, nil
+}
+
 func (s *Service) CreateHostMapping(mapping *model.HostMapping) error {
 	mapping.CreatedAt = time.Now()
 	mapping.UpdatedAt = time.Now()
@@ -2068,6 +2109,7 @@ func (s *Service) UpdateHostMapping(id uint, updates map[string]interface{}) err
 	updates["updated_at"] = time.Now()
 	delete(updates, "id")
 	delete(updates, "created_at")
+	delete(updates, "owner_id")
 	return s.db.Model(&model.HostMapping{}).Where("id = ?", id).Updates(updates).Error
 }
 
@@ -2101,6 +2143,19 @@ func (s *Service) GetIngress(id uint) (*model.Ingress, error) {
 	return &ingress, nil
 }
 
+func (s *Service) GetIngressByOwner(id uint, userID uint, isAdmin bool) (*model.Ingress, error) {
+	var ingress model.Ingress
+	query := s.db.Where("id = ?", id)
+	if !isAdmin {
+		query = query.Where("owner_id = ? OR owner_id IS NULL", userID)
+	}
+	err := query.First(&ingress).Error
+	if err != nil {
+		return nil, err
+	}
+	return &ingress, nil
+}
+
 func (s *Service) CreateIngress(ingress *model.Ingress) error {
 	ingress.CreatedAt = time.Now()
 	ingress.UpdatedAt = time.Now()
@@ -2111,6 +2166,7 @@ func (s *Service) UpdateIngress(id uint, updates map[string]interface{}) error {
 	updates["updated_at"] = time.Now()
 	delete(updates, "id")
 	delete(updates, "created_at")
+	delete(updates, "owner_id")
 	return s.db.Model(&model.Ingress{}).Where("id = ?", id).Updates(updates).Error
 }
 
@@ -2144,6 +2200,19 @@ func (s *Service) GetRecorder(id uint) (*model.Recorder, error) {
 	return &recorder, nil
 }
 
+func (s *Service) GetRecorderByOwner(id uint, userID uint, isAdmin bool) (*model.Recorder, error) {
+	var recorder model.Recorder
+	query := s.db.Where("id = ?", id)
+	if !isAdmin {
+		query = query.Where("owner_id = ? OR owner_id IS NULL", userID)
+	}
+	err := query.First(&recorder).Error
+	if err != nil {
+		return nil, err
+	}
+	return &recorder, nil
+}
+
 func (s *Service) CreateRecorder(recorder *model.Recorder) error {
 	recorder.CreatedAt = time.Now()
 	recorder.UpdatedAt = time.Now()
@@ -2154,6 +2223,7 @@ func (s *Service) UpdateRecorder(id uint, updates map[string]interface{}) error 
 	updates["updated_at"] = time.Now()
 	delete(updates, "id")
 	delete(updates, "created_at")
+	delete(updates, "owner_id")
 	return s.db.Model(&model.Recorder{}).Where("id = ?", id).Updates(updates).Error
 }
 
@@ -2187,6 +2257,19 @@ func (s *Service) GetRouter(id uint) (*model.Router, error) {
 	return &router, nil
 }
 
+func (s *Service) GetRouterByOwner(id uint, userID uint, isAdmin bool) (*model.Router, error) {
+	var router model.Router
+	query := s.db.Where("id = ?", id)
+	if !isAdmin {
+		query = query.Where("owner_id = ? OR owner_id IS NULL", userID)
+	}
+	err := query.First(&router).Error
+	if err != nil {
+		return nil, err
+	}
+	return &router, nil
+}
+
 func (s *Service) CreateRouter(router *model.Router) error {
 	router.CreatedAt = time.Now()
 	router.UpdatedAt = time.Now()
@@ -2197,6 +2280,7 @@ func (s *Service) UpdateRouter(id uint, updates map[string]interface{}) error {
 	updates["updated_at"] = time.Now()
 	delete(updates, "id")
 	delete(updates, "created_at")
+	delete(updates, "owner_id")
 	return s.db.Model(&model.Router{}).Where("id = ?", id).Updates(updates).Error
 }
 
@@ -2230,6 +2314,19 @@ func (s *Service) GetSD(id uint) (*model.SD, error) {
 	return &sd, nil
 }
 
+func (s *Service) GetSDByOwner(id uint, userID uint, isAdmin bool) (*model.SD, error) {
+	var sd model.SD
+	query := s.db.Where("id = ?", id)
+	if !isAdmin {
+		query = query.Where("owner_id = ? OR owner_id IS NULL", userID)
+	}
+	err := query.First(&sd).Error
+	if err != nil {
+		return nil, err
+	}
+	return &sd, nil
+}
+
 func (s *Service) CreateSD(sd *model.SD) error {
 	sd.CreatedAt = time.Now()
 	sd.UpdatedAt = time.Now()
@@ -2240,6 +2337,7 @@ func (s *Service) UpdateSD(id uint, updates map[string]interface{}) error {
 	updates["updated_at"] = time.Now()
 	delete(updates, "id")
 	delete(updates, "created_at")
+	delete(updates, "owner_id")
 	return s.db.Model(&model.SD{}).Where("id = ?", id).Updates(updates).Error
 }
 
