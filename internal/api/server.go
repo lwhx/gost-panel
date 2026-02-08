@@ -1011,7 +1011,7 @@ func (s *Server) serveClientScript(c *gin.Context) {
 	}
 
 	// 获取正确的 Panel URL
-	panelURL := getPanelURL(c)
+	panelURL := s.getPanelURL(c)
 
 	script := fmt.Sprintf(`#!/bin/bash
 # GOST 客户端安装脚本

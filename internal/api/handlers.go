@@ -51,14 +51,18 @@ func parseID(c *gin.Context) (uint, bool) {
 }
 
 // getPanelURL 获取 Panel 的完整 URL（支持反向代理）
-func getPanelURL(c *gin.Context) string {
-	// 优先使用 X-Forwarded-Host
+func (s *Server) getPanelURL(c *gin.Context) string {
+	// 优先使用系统设置中的站点 URL
+	if siteURL := s.svc.GetSiteConfig(model.ConfigSiteURL); siteURL != "" {
+		return strings.TrimSuffix(siteURL, "/")
+	}
+
+	// 回退: 从请求头自动检测
 	host := c.GetHeader("X-Forwarded-Host")
 	if host == "" {
 		host = c.Request.Host
 	}
 
-	// 检测协议（多种反代头兼容）
 	scheme := "http"
 	if c.GetHeader("X-Forwarded-Proto") == "https" {
 		scheme = "https"
@@ -878,7 +882,7 @@ func (s *Server) getNodeInstallScript(c *gin.Context) {
 	}
 
 	// 获取正确的 Panel URL（支持反向代理）
-	panelURL := getPanelURL(c)
+	panelURL := s.getPanelURL(c)
 	githubRaw := s.cfg.GitHubRawURL
 
 	var script, oneLineCommand string
@@ -1078,7 +1082,7 @@ func (s *Server) getClientInstallScript(c *gin.Context) {
 	}
 
 	// 获取正确的 Panel URL（支持反向代理）
-	panelURL := getPanelURL(c)
+	panelURL := s.getPanelURL(c)
 	githubRaw := s.cfg.GitHubRawURL
 
 	var script, oneLineCommand string
