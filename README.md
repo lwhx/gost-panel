@@ -209,14 +209,64 @@ go build -o gost-panel ./cmd/panel
 
 在面板创建节点后，从节点详情页复制安装命令：
 
+### 一键安装
+
 **Linux:**
 ```bash
+# curl
 curl -fsSL "https://your-panel.com/scripts/install-node.sh" | bash -s -- -p "https://your-panel.com" -t "YOUR_TOKEN"
+
+# 或 wget
+wget -qO- "https://your-panel.com/scripts/install-node.sh" | bash -s -- -p "https://your-panel.com" -t "YOUR_TOKEN"
 ```
 
 **Windows (管理员 PowerShell):**
 ```powershell
 irm "https://your-panel.com/scripts/install-node.ps1" -OutFile "$env:TEMP\install-node.ps1"; & "$env:TEMP\install-node.ps1" -PanelUrl "https://your-panel.com" -Token "YOUR_TOKEN"
+```
+
+### 手动安装节点
+
+适用于无法执行一键脚本的环境。在面板创建节点后获取 Token。
+
+```bash
+# 1. 安装 GOST
+bash <(curl -fsSL https://github.com/go-gost/gost/raw/master/install.sh) --install
+
+# 2. 下载 Agent (PANEL_URL 和 TOKEN 替换为实际值)
+PANEL_URL="https://your-panel.com"
+TOKEN="YOUR_TOKEN"
+
+mkdir -p /opt/gost-panel
+# 从 GitHub Releases 下载
+VERSION=$(curl -s https://api.github.com/repos/AliceNetworks/gost-panel/releases/latest | grep tag_name | cut -d '"' -f 4)
+curl -fsSL "https://github.com/AliceNetworks/gost-panel/releases/download/${VERSION}/gost-agent-linux-amd64" -o /opt/gost-panel/gost-agent
+chmod +x /opt/gost-panel/gost-agent
+
+# 3. 下载配置
+mkdir -p /etc/gost
+curl -fsSL "${PANEL_URL}/agent/config/${TOKEN}" -o /etc/gost/gost.yml
+
+# 4. 创建 systemd 服务
+cat > /etc/systemd/system/gost-node.service << EOF
+[Unit]
+Description=GOST Panel Node Agent
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/opt/gost-panel/gost-agent -panel ${PANEL_URL} -token ${TOKEN}
+Restart=always
+RestartSec=10
+LimitNOFILE=65535
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+# 5. 启动服务
+systemctl daemon-reload
+systemctl enable --now gost-node
 ```
 
 ### 支持的平台
@@ -228,16 +278,60 @@ irm "https://your-panel.com/scripts/install-node.ps1" -OutFile "$env:TEMP\instal
 
 ## 客户端部署
 
-用于反向隧道 (访问内网服务):
+用于反向隧道 (访问内网服务)。
+
+### 一键安装
 
 **Linux:**
 ```bash
+# curl
 curl -fsSL "https://your-panel.com/scripts/install-client.sh" | bash -s -- -p "https://your-panel.com" -t "CLIENT_TOKEN"
+
+# 或 wget
+wget -qO- "https://your-panel.com/scripts/install-client.sh" | bash -s -- -p "https://your-panel.com" -t "CLIENT_TOKEN"
 ```
 
 **Windows:**
 ```powershell
 irm "https://your-panel.com/scripts/install-client.ps1" -OutFile "$env:TEMP\install-client.ps1"; & "$env:TEMP\install-client.ps1" -PanelUrl "https://your-panel.com" -Token "CLIENT_TOKEN"
+```
+
+### 手动安装客户端
+
+```bash
+# 1. 安装 GOST
+bash <(curl -fsSL https://github.com/go-gost/gost/raw/master/install.sh) --install
+
+# 2. 下载配置 (PANEL_URL 和 TOKEN 替换为实际值)
+PANEL_URL="https://your-panel.com"
+TOKEN="YOUR_CLIENT_TOKEN"
+
+mkdir -p /etc/gost
+curl -fsSL "${PANEL_URL}/agent/config/${TOKEN}" -o /etc/gost/client.yml
+
+# 3. 创建 systemd 服务
+cat > /etc/systemd/system/gost-client.service << EOF
+[Unit]
+Description=GOST Panel Client
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/gost -C /etc/gost/client.yml
+Restart=always
+RestartSec=5
+LimitNOFILE=65535
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+# 4. 创建心跳 (每分钟上报在线状态)
+echo "* * * * * curl -fsSL -X POST ${PANEL_URL}/agent/client-heartbeat/${TOKEN} > /dev/null 2>&1" | crontab -
+
+# 5. 启动服务
+systemctl daemon-reload
+systemctl enable --now gost-client
 ```
 
 ## API 文档
