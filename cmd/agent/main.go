@@ -843,6 +843,12 @@ func (a *Agent) restartSelf() error {
 }
 
 func main() {
+	// Check for service subcommand before flag parsing
+	if len(os.Args) > 1 && os.Args[1] == "service" {
+		handleAgentServiceCommand()
+		return
+	}
+
 	flag.Parse()
 
 	if *showVersion {

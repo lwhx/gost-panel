@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"embed"
 	"encoding/json"
 	"fmt"
@@ -488,6 +489,26 @@ func (s *Server) setupStaticFiles() {
 
 func (s *Server) Run() error {
 	return s.router.Run(s.cfg.ListenAddr)
+}
+
+// RunWithContext starts the server and shuts down gracefully when ctx is cancelled.
+func (s *Server) RunWithContext(ctx context.Context) error {
+	srv := &http.Server{
+		Addr:    s.cfg.ListenAddr,
+		Handler: s.router,
+	}
+
+	go func() {
+		<-ctx.Done()
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		srv.Shutdown(shutdownCtx)
+	}()
+
+	if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+		return err
+	}
+	return nil
 }
 
 // ==================== 中间件 ====================

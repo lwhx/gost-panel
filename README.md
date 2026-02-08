@@ -101,18 +101,21 @@ curl -fsSL https://raw.githubusercontent.com/AliceNetworks/gost-panel/main/scrip
 VERSION=$(curl -s https://api.github.com/repos/AliceNetworks/gost-panel/releases/latest | grep tag_name | cut -d '"' -f 4)
 curl -fsSL "https://github.com/AliceNetworks/gost-panel/releases/download/${VERSION}/gost-panel-linux-amd64.tar.gz" | tar -xz
 chmod +x gost-panel-linux-amd64
+mv gost-panel-linux-amd64 /usr/local/bin/gost-panel
 
-# 运行 (默认端口 8080)
-./gost-panel-linux-amd64
+# 安装为系统服务 (推荐)
+gost-panel service install -listen :8080
+gost-panel service start
 
-# 自定义端口
-./gost-panel-linux-amd64 -listen :9000
+# 或直接前台运行
+gost-panel -listen :8080
 ```
 
 ### 命令行参数
 
 ```bash
 gost-panel [options]
+gost-panel service <command> [options]
 
 选项:
   -listen string    监听地址 (默认 ":8080")
@@ -121,6 +124,14 @@ gost-panel [options]
   -debug            启用调试模式
   -version          显示版本信息
   -help             显示帮助
+
+服务管理:
+  service install    安装为系统服务 (systemd/Windows Service)
+  service uninstall  卸载系统服务
+  service start      启动服务
+  service stop       停止服务
+  service restart    重启服务
+  service status     查看服务状态
 ```
 
 ### 环境变量

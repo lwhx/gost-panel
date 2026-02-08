@@ -1,10 +1,13 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"log"
 	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/AliceNetworks/gost-panel/internal/api"
@@ -21,8 +24,18 @@ var (
 	showHelp    = flag.Bool("help", false, "Show help")
 )
 
-func main() {
+func parseFlags() {
 	flag.Parse()
+}
+
+func main() {
+	// Check for service subcommand before flag parsing
+	if len(os.Args) > 1 && os.Args[1] == "service" {
+		handleServiceCommand()
+		return
+	}
+
+	parseFlags()
 
 	if *showHelp {
 		printUsage()
@@ -67,10 +80,21 @@ func main() {
 	// 启动 API 服务
 	server := api.NewServer(svc, cfg)
 
+	// 使用带信号处理的优雅关闭
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	go func() {
+		sigChan := make(chan os.Signal, 1)
+		signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
+		<-sigChan
+		log.Println("Shutting down...")
+		cancel()
+	}()
+
 	log.Printf("GOST Panel starting on %s", cfg.ListenAddr)
-	if err := server.Run(); err != nil {
+	if err := server.RunWithContext(ctx); err != nil {
 		log.Fatalf("Server error: %v", err)
-		os.Exit(1)
 	}
 }
 
@@ -79,6 +103,7 @@ func printUsage() {
 	fmt.Println()
 	fmt.Println("Usage:")
 	fmt.Println("  gost-panel [options]")
+	fmt.Println("  gost-panel service <command> [options]")
 	fmt.Println()
 	fmt.Println("Options:")
 	fmt.Println("  -listen string    Listen address (default \":8080\")")
@@ -87,6 +112,14 @@ func printUsage() {
 	fmt.Println("  -debug            Enable debug mode")
 	fmt.Println("  -version          Show version")
 	fmt.Println("  -help             Show this help")
+	fmt.Println()
+	fmt.Println("Service Commands:")
+	fmt.Println("  service install    Install as system service")
+	fmt.Println("  service uninstall  Remove system service")
+	fmt.Println("  service start      Start the service")
+	fmt.Println("  service stop       Stop the service")
+	fmt.Println("  service restart    Restart the service")
+	fmt.Println("  service status     Check service status")
 	fmt.Println()
 	fmt.Println("Environment Variables:")
 	fmt.Println("  LISTEN_ADDR       Listen address (same as -listen)")
@@ -97,7 +130,8 @@ func printUsage() {
 	fmt.Println()
 	fmt.Println("Examples:")
 	fmt.Println("  gost-panel -listen :9000")
-	fmt.Println("  gost-panel -listen 0.0.0.0:8080 -db /var/lib/gost-panel/panel.db")
+	fmt.Println("  gost-panel service install -listen :9000")
+	fmt.Println("  gost-panel service start")
 	fmt.Println("  LISTEN_ADDR=:9000 JWT_SECRET=mysecret gost-panel")
 }
 
