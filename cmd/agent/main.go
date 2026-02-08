@@ -31,7 +31,7 @@ var (
 	panelURL    = flag.String("panel", "", "Panel URL (e.g., http://panel.example.com:8080)")
 	token       = flag.String("token", "", "Agent token")
 	configPath  = flag.String("config", "/etc/gost/gost.yml", "GOST config path")
-	gostPath    = flag.String("gost", "/usr/local/bin/gost", "GOST binary path")
+	gostPath    = flag.String("gost", "", "GOST binary path (auto-detect if empty)")
 	gostAPI     = flag.String("gost-api", "http://127.0.0.1:18080", "GOST API address")
 	gostUser    = flag.String("gost-user", "", "GOST API username")
 	gostPass    = flag.String("gost-pass", "", "GOST API password")
@@ -172,6 +172,35 @@ func (a *Agent) downloadConfig() error {
 	}
 
 	return os.WriteFile(a.configPath, configData, 0644)
+}
+
+// findGost 自动检测 GOST 二进制路径
+func findGost(explicit string) (string, error) {
+	if explicit != "" {
+		if _, err := os.Stat(explicit); err == nil {
+			return explicit, nil
+		}
+		return "", fmt.Errorf("specified gost path not found: %s", explicit)
+	}
+
+	// 1. 从 PATH 搜索
+	if p, err := exec.LookPath("gost"); err == nil {
+		return p, nil
+	}
+
+	// 2. 常见安装路径
+	for _, p := range []string{
+		"/usr/local/bin/gost",
+		"/usr/bin/gost",
+		"/opt/gost-panel/gost",
+		"/opt/gost/gost",
+	} {
+		if _, err := os.Stat(p); err == nil {
+			return p, nil
+		}
+	}
+
+	return "", fmt.Errorf("gost binary not found, install it or specify with -gost flag")
 }
 
 func (a *Agent) startGost() error {
@@ -805,7 +834,7 @@ func main() {
 		fmt.Println("  -panel       Panel URL (e.g., http://panel.example.com:8080)")
 		fmt.Println("  -token       Agent token from panel")
 		fmt.Println("  -config      GOST config path (default: /etc/gost/gost.yml)")
-		fmt.Println("  -gost        GOST binary path (default: /usr/local/bin/gost)")
+		fmt.Println("  -gost        GOST binary path (auto-detect if empty)")
 		fmt.Println("  -gost-api    GOST API address (default: http://127.0.0.1:18080)")
 		fmt.Println("  -gost-user   GOST API username (optional)")
 		fmt.Println("  -gost-pass   GOST API password (optional)")
@@ -816,7 +845,14 @@ func main() {
 
 	log.Printf("Starting gost-agent %s (%s/%s)", AgentVersion, runtime.GOOS, runtime.GOARCH)
 
-	agent := NewAgent(*panelURL, *token, *configPath, *gostPath, *gostAPI, *gostUser, *gostPass, *autoUpdate)
+	// 自动检测 GOST 路径
+	resolvedGostPath, err := findGost(*gostPath)
+	if err != nil {
+		log.Fatalf("GOST not found: %v", err)
+	}
+	log.Printf("Using GOST: %s", resolvedGostPath)
+
+	agent := NewAgent(*panelURL, *token, *configPath, resolvedGostPath, *gostAPI, *gostUser, *gostPass, *autoUpdate)
 	if err := agent.Run(); err != nil {
 		log.Fatalf("Agent error: %v", err)
 	}
