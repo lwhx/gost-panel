@@ -368,10 +368,9 @@
             checkable
             :checked="selectedTagIds.includes(tag.id)"
             @update:checked="(checked: boolean) => { if (checked) selectedTagIds.push(tag.id); else selectedTagIds = selectedTagIds.filter(id => id !== tag.id) }"
-            closable
+            :closable="userStore.canWrite"
             @close="handleDeleteTag(tag.id)"
             style="cursor: pointer;"
-            :closable="userStore.canWrite"
           >
             {{ tag.name }}
           </n-tag>
